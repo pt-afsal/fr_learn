@@ -1,4 +1,5 @@
 import type { SkillTopic } from './types'
+import { applyGrammarGuides } from './grammarGuides'
 
 type GrammarDetail = Pick<SkillTopic, 'explanationEn' | 'explanationFr' | 'examples'>
 
@@ -374,4 +375,5 @@ export function applyDetailedGrammarTopics(topics: SkillTopic[]) {
     topic.estimatedMinutes ??= topic.level === 'A1' ? 8 : topic.level === 'A2' ? 10 : topic.level === 'B1' ? 14 : 18
     topic.sequence ??= index + 1
   })
+  applyGrammarGuides(topics)
 }

@@ -37,6 +37,21 @@ export const dayKeys: DayKey[] = [
 
 export type WeeklyAvailability = Record<DayKey, number>
 
+
+export interface GrammarMistake {
+  incorrect: string
+  correct: string
+  explanation: string
+}
+
+export interface GrammarLessonGuide {
+  goals: string[]
+  rules: string[]
+  commonMistakes: GrammarMistake[]
+  memoryTip: string
+  quickReference?: Array<{ label: string; value: string }>
+}
+
 export interface SkillTopic {
   id: string
   level: CefrLevel
@@ -52,6 +67,7 @@ export interface SkillTopic {
   estimatedMinutes?: number
   sequence?: number
   source?: 'seed' | 'totem' | 'personal'
+  lessonGuide?: GrammarLessonGuide
 }
 
 export interface Question {

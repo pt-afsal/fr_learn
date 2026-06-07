@@ -238,3 +238,37 @@ legend { padding: 0 5px; font-weight: 750; font-size: 14px; }
   .score-grid { grid-template-columns: repeat(2, 1fr); }
   .rating-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Detailed grammar lessons */
+.grammar-guide { display: grid; gap: 14px; margin-top: 14px; }
+.grammar-summary h3, .grammar-card h3 { margin: 0 0 8px; font-size: 15px; letter-spacing: -.01em; }
+.grammar-summary p { margin: 0; }
+.grammar-guide-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+.grammar-card { padding: 14px; border: 1px solid var(--line); border-radius: 11px; background: #fbfcfc; }
+.grammar-card ul { margin: 0; padding-left: 18px; }
+.grammar-card li { margin: 5px 0; color: #415451; line-height: 1.58; }
+.grammar-reference { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 7px; }
+.grammar-reference div { padding: 9px; border-radius: 8px; background: var(--surface-soft); display: grid; gap: 3px; }
+.grammar-reference strong { color: var(--primary-dark); font-size: 12px; }
+.grammar-reference span { color: var(--muted); font-size: 12px; }
+.mistake-list { display: grid; gap: 9px; }
+.mistake-list article { padding: 10px; border-radius: 9px; background: #fff; border: 1px solid #e6eeee; }
+.mistake-list article div { display: grid; gap: 4px; }
+.mistake-list p { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.wrong-example, .right-example { font-size: 13px; }
+.wrong-example { color: var(--danger); }
+.right-example { color: var(--correct); font-weight: 700; }
+.memory-tip { padding: 13px 14px; border-radius: 11px; background: var(--primary-soft); color: var(--primary-dark); display: grid; gap: 4px; }
+.memory-tip strong { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.memory-tip span { font-size: 13px; line-height: 1.55; }
+.compact-guide { max-height: 58vh; overflow-y: auto; padding-right: 6px; }
+.quiz-progress { height: 7px; border-radius: 999px; overflow: hidden; background: #e8efee; margin: 12px 0 20px; }
+.quiz-progress span { display: block; height: 100%; background: var(--primary); transition: width .2s ease; }
+.quiz-summary { max-width: 610px; }
+.summary-score { display: flex; align-items: end; gap: 12px; margin: 18px 0 10px; }
+.summary-score strong { color: var(--primary-dark); font-size: 54px; line-height: .9; letter-spacing: -.08em; }
+.summary-score span { color: var(--muted); font-size: 17px; font-weight: 800; }
+@media (max-width: 760px) {
+  .grammar-guide-grid { grid-template-columns: 1fr; }
+  .compact-guide { max-height: 54vh; }
+}

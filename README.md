@@ -11,6 +11,8 @@ French Path is a redesigned, offline-first French-learning application for perso
 - Target selection: A1 → A2, A2 → B1, and B1 → B1 mastery.
 - Daily guided session with grammar, vocabulary, conjugation, reading, writing, pronunciation, and weekly review tasks.
 - Existing grammar topics, vocabulary decks, verb content, reading material, and writing prompts preserved.
+- Detailed grammar guides for all 58 visible A1, A2, and B1 topics. Each guide includes an overview, learning goals, formation and usage rules, examples with audio, common mistakes, and a memory tip.
+- A manual 10-question quiz can be launched directly from every grammar topic. Each completed quiz offers a result summary and the option to start another set.
 - 100 additional offline reading-comprehension sets: 30 A1, 35 A2, and 35 B1. These are deterministic template-derived exercises so the app remains useful without AI.
 - Vocabulary spaced repetition with `Again`, `Difficult`, `Good`, and `Easy` review ratings.
 - Local progress history using IndexedDB through Dexie.
@@ -22,6 +24,18 @@ French Path is a redesigned, offline-first French-learning application for perso
   - writing correction and scoring;
   - pronunciation-practice advice.
 - Browser speech recognition and French text-to-speech for the first pronunciation module.
+
+## Grammar lessons and manual quizzes
+
+Open **Learn → Grammar**, then select any A1, A2, or B1 topic from the left panel. The detailed lesson appears on the right. Select:
+
+```text
+Start manual quiz · 10 questions
+```
+
+A manual set always contains 10 questions for the selected topic. Your grammar confidence score is updated after every answer. At the end, you can review your result, close the quiz, or immediately start another 10-question set.
+
+---
 
 ## Important pronunciation note
 
@@ -89,7 +103,7 @@ ollama pull gemma4:e2b-it-q4_K_M
 From the project folder:
 
 ```bash
-npm install
+npm ci
 npm run build
 npm start
 ```
@@ -103,7 +117,7 @@ http://localhost:8787
 For development mode with automatic reload:
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -157,6 +171,7 @@ Use remote access only when you understand the privacy and network implications.
 src/
   App.tsx                      Main interface and exercise workspaces
   App.css                      Clean responsive design
+  grammarGuides.ts             Detailed grammar guides and common mistakes
   db.ts                        IndexedDB persistence and migrations
   types.ts                     Shared data types
   features/

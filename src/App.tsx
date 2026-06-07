@@ -16,6 +16,7 @@ import {
   updateVerbMastery,
 } from './db'
 import { curatedReadingExercises, curatedWritingPrompts } from './features/contentRegistry'
+import { getGrammarGuide } from './grammarGuides'
 import {
   formatMinutes,
   generateWeekPlan,
@@ -130,7 +131,7 @@ export default function App() {
         {notice && <Notice text={notice} onClose={() => setNotice('')} />}
         {activeView === 'today' && <TodayView snapshot={snapshot} plan={weekPlan} today={today} completed={completedIds} onOpen={(task) => setWorkspace({ type: task.type, contentId: task.contentId, task })} />}
         {activeView === 'plan' && <PlanView snapshot={snapshot} plan={weekPlan} completed={completedIds} onSave={saveSettings} onOpen={(task) => setWorkspace({ type: task.type, contentId: task.contentId, task })} />}
-        {activeView === 'learn' && <LearnView snapshot={snapshot} onRefresh={refresh} />}
+        {activeView === 'learn' && <LearnView snapshot={snapshot} onRefresh={refresh} onOpenQuiz={(contentId) => setWorkspace({ type: 'grammar-practice', contentId })} />}
         {activeView === 'practice' && <PracticeView snapshot={snapshot} onRefresh={refresh} onOpen={(type, contentId) => setWorkspace({ type, contentId })} />}
         {activeView === 'progress' && <ProgressView snapshot={snapshot} plan={weekPlan} />}
         {activeView === 'settings' && <SettingsView snapshot={snapshot} onSave={saveSettings} onRefresh={refresh} onNotice={setNotice} />}
@@ -255,30 +256,46 @@ function PlanView({ snapshot, plan, completed, onSave, onOpen }: { snapshot: Lea
   </>
 }
 
-function LearnView({ snapshot, onRefresh }: { snapshot: LearningSnapshot; onRefresh: () => Promise<void> }) {
+function LearnView({ snapshot, onRefresh, onOpenQuiz }: { snapshot: LearningSnapshot; onRefresh: () => Promise<void>; onOpenQuiz: (contentId: string) => void }) {
   const [tab, setTab] = useState<'grammar' | 'vocabulary' | 'verbs'>('grammar')
   return <>
     <PageHeader title="Learn" description="Browse the curriculum when you want to revise a specific lesson outside the daily session." />
     <div className="tab-bar">{(['grammar', 'vocabulary', 'verbs'] as const).map((item) => <button className={tab === item ? 'active' : ''} onClick={() => setTab(item)} key={item}>{item === 'verbs' ? 'Verbs' : capitalize(item)}</button>)}</div>
-    {tab === 'grammar' && <GrammarLibrary snapshot={snapshot} onRefresh={onRefresh} />}
+    {tab === 'grammar' && <GrammarLibrary snapshot={snapshot} onRefresh={onRefresh} onOpenQuiz={onOpenQuiz} />}
     {tab === 'vocabulary' && <VocabularyLibrary snapshot={snapshot} />}
     {tab === 'verbs' && <VerbLibrary snapshot={snapshot} />}
   </>
 }
 
-function GrammarLibrary({ snapshot }: { snapshot: LearningSnapshot; onRefresh: () => Promise<void> }) {
+function GrammarLibrary({ snapshot, onOpenQuiz }: { snapshot: LearningSnapshot; onRefresh: () => Promise<void>; onOpenQuiz: (contentId: string) => void }) {
   const topics = snapshot.topics.filter((topic) => topic.level !== 'B2').sort((a, b) => (a.sequence ?? 999) - (b.sequence ?? 999))
   const [selectedId, setSelectedId] = useState(topics[0]?.id ?? '')
   const [aiExplanation, setAiExplanation] = useState<AiExplanation | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const selected = topics.find((topic) => topic.id === selectedId) ?? topics[0]
+  const questionCount = selected ? snapshot.questions.filter((question) => question.topicId === selected.id).length : 0
   const requestExplanation = async () => {
     if (!selected) return
     setLoading(true); setError(''); setAiExplanation(null)
     try { setAiExplanation(await explainGrammar(aiConfigFromSettings(snapshot.settings), { level: snapshot.settings.currentLevel, topic: selected.titleEn, lesson: selected.explanationEn, language: snapshot.settings.languageMode })) } catch (reason) { setError(errorMessage(reason)) } finally { setLoading(false) }
   }
-  return <div className="library-layout"><aside className="library-list">{(['A1', 'A2', 'B1'] as LearningLevel[]).map((level) => <div key={level}><h3>{level}</h3>{topics.filter((topic) => topic.level === level).map((topic) => <button className={selected?.id === topic.id ? 'selected' : ''} key={topic.id} onClick={() => { setSelectedId(topic.id); setAiExplanation(null) }}><span>{topic.titleEn}</span><small>{topic.confidence}%</small></button>)}</div>)}</aside>{selected && <section className="lesson-panel"><span className="eyebrow">{selected.level} · {selected.area}</span><h2>{selected.titleEn}</h2><p>{snapshot.settings.languageMode === 'fr' ? selected.explanationFr : selected.explanationEn}</p><h3>Examples</h3><ul>{selected.examples.map((example) => <li key={example}>{example}<SpeakButton text={example} enabled={snapshot.settings.speechEnabled} /></li>)}</ul><div className="confidence-line"><span>Confidence</span><Meter value={selected.confidence} /></div><button className="secondary-button" disabled={loading || snapshot.settings.aiProvider !== 'ollama'} onClick={() => void requestExplanation()}>{loading ? 'Generating…' : 'Explain more simply with Ollama'}</button>{snapshot.settings.aiProvider !== 'ollama' && <p className="helper">Enable Ollama in Settings to request a personalised explanation.</p>}{error && <ErrorBox text={error} />}{aiExplanation && <div className="ai-box"><h3>Local AI explanation</h3><p>{aiExplanation.explanation}</p><ul>{aiExplanation.examples.map((example) => <li key={example}>{example}</li>)}</ul>{aiExplanation.commonMistakes.length > 0 && <><h4>Common mistakes</h4><ul>{aiExplanation.commonMistakes.map((item) => <li key={item}>{item}</li>)}</ul></>}</div>}</section>}</div>
+  return <div className="library-layout"><aside className="library-list">{(['A1', 'A2', 'B1'] as LearningLevel[]).map((level) => <div key={level}><h3>{level}</h3>{topics.filter((topic) => topic.level === level).map((topic) => <button className={selected?.id === topic.id ? 'selected' : ''} key={topic.id} onClick={() => { setSelectedId(topic.id); setAiExplanation(null) }}><span>{topic.titleEn}</span><small>{topic.confidence}%</small></button>)}</div>)}</aside>{selected && <section className="lesson-panel"><span className="eyebrow">{selected.level} · {selected.area}</span><h2>{selected.titleEn}</h2><GrammarTopicContent topic={selected} language={snapshot.settings.languageMode} speechEnabled={snapshot.settings.speechEnabled} /><div className="confidence-line"><span>Confidence</span><Meter value={selected.confidence} /></div><div className="button-row"><button className="primary-button" onClick={() => onOpenQuiz(selected.id)}>Start manual quiz · 10 questions</button><button className="secondary-button" disabled={loading || snapshot.settings.aiProvider !== 'ollama'} onClick={() => void requestExplanation()}>{loading ? 'Generating…' : 'Explain more simply with Ollama'}</button></div><p className="helper">{Math.min(10, questionCount)} questions will be selected for each manual set. Launch another set after finishing to revise the topic again.</p>{snapshot.settings.aiProvider !== 'ollama' && <p className="helper">Enable Ollama in Settings to request a personalised explanation.</p>}{error && <ErrorBox text={error} />}{aiExplanation && <div className="ai-box"><h3>Local AI explanation</h3><p>{aiExplanation.explanation}</p><ul>{aiExplanation.examples.map((example) => <li key={example}>{example}</li>)}</ul>{aiExplanation.commonMistakes.length > 0 && <><h4>Common mistakes</h4><ul>{aiExplanation.commonMistakes.map((item) => <li key={item}>{item}</li>)}</ul></>}</div>}</section>}</div>
+}
+
+function GrammarTopicContent({ topic, language, speechEnabled, compact = false }: { topic: SkillTopic; language: 'en' | 'fr'; speechEnabled: boolean; compact?: boolean }) {
+  const guide = topic.lessonGuide ?? getGrammarGuide(topic)
+  return <div className={`grammar-guide ${compact ? 'compact-guide' : ''}`}>
+    <section className="grammar-summary"><h3>Overview</h3><p>{language === 'fr' ? topic.explanationFr : topic.explanationEn}</p></section>
+    <div className="grammar-guide-grid">
+      <section className="grammar-card"><h3>Learning goals</h3><ul>{guide.goals.map((goal) => <li key={goal}>{goal}</li>)}</ul></section>
+      <section className="grammar-card"><h3>How it works</h3><ul>{guide.rules.map((rule) => <li key={rule}>{rule}</li>)}</ul></section>
+    </div>
+    {guide.quickReference?.length ? <section className="grammar-card"><h3>Quick reference</h3><div className="grammar-reference">{guide.quickReference.map((item) => <div key={`${item.label}-${item.value}`}><strong>{item.label}</strong><span>{item.value}</span></div>)}</div></section> : null}
+    <section className="grammar-card"><h3>Examples</h3><div className="example-box">{topic.examples.map((example) => <div key={example}><span>{example}</span><SpeakButton text={example} enabled={speechEnabled} /></div>)}</div></section>
+    <section className="grammar-card mistake-card"><h3>Common mistakes</h3><div className="mistake-list">{guide.commonMistakes.map((mistake) => <article key={`${mistake.incorrect}-${mistake.correct}`}><div><span className="wrong-example">✕ {mistake.incorrect}</span><span className="right-example">✓ {mistake.correct}</span></div><p>{mistake.explanation}</p></article>)}</div></section>
+    <section className="memory-tip"><strong>Memory tip</strong><span>{guide.memoryTip}</span></section>
+  </div>
 }
 
 function VocabularyLibrary({ snapshot }: { snapshot: LearningSnapshot }) {
@@ -363,18 +380,42 @@ function Workspace({ snapshot, request, onClose, onDone, onRefresh }: { snapshot
 function GrammarLessonWorkspace({ snapshot, contentId, onDone }: { snapshot: LearningSnapshot; contentId?: string; onDone: (score?: number) => Promise<void> }) {
   const topic = snapshot.topics.find((item) => item.id === contentId) ?? [...snapshot.topics].filter((item) => item.level !== 'B2').sort((a, b) => a.confidence - b.confidence)[0]
   if (!topic) return <EmptyState title="No grammar topic found" description="The grammar library is empty." />
-  return <div className="exercise"><span className="eyebrow">{topic.level} · {topic.area}</span><h3>{topic.titleEn}</h3><p>{snapshot.settings.languageMode === 'fr' ? topic.explanationFr : topic.explanationEn}</p><div className="example-box">{topic.examples.map((example) => <div key={example}><span>{example}</span><SpeakButton text={example} enabled={snapshot.settings.speechEnabled} /></div>)}</div><button className="primary-button" onClick={() => void onDone()}>Mark lesson complete</button></div>
+  return <div className="exercise"><span className="eyebrow">{topic.level} · {topic.area}</span><h3>{topic.titleEn}</h3><GrammarTopicContent topic={topic} language={snapshot.settings.languageMode} speechEnabled={snapshot.settings.speechEnabled} compact /><button className="primary-button" onClick={() => void onDone()}>Mark lesson complete</button></div>
 }
 
 function GrammarPracticeWorkspace({ snapshot, contentId, onDone, onRefresh }: { snapshot: LearningSnapshot; contentId?: string; onDone: (score?: number) => Promise<void>; onRefresh: () => Promise<void> }) {
   const topic = snapshot.topics.find((item) => item.id === contentId) ?? [...snapshot.topics].filter((item) => item.level !== 'B2').sort((a, b) => a.confidence - b.confidence)[0]
-  const questions = snapshot.questions.filter((question) => question.topicId === topic?.id).slice(0, 8)
-  const [index, setIndex] = useState(0); const [answer, setAnswer] = useState(''); const [result, setResult] = useState<boolean | null>(null); const [score, setScore] = useState(0)
+  const [quizToken, setQuizToken] = useState(() => crypto.randomUUID())
+  const questions = useMemo(() => topic ? buildManualQuiz(snapshot.questions.filter((question) => question.topicId === topic.id), quizToken, 10) : [], [snapshot.questions, topic?.id, quizToken])
+  const [index, setIndex] = useState(0)
+  const [answer, setAnswer] = useState('')
+  const [result, setResult] = useState<boolean | null>(null)
+  const [score, setScore] = useState(0)
+  const [finished, setFinished] = useState(false)
   const question = questions[index]
   if (!question || !topic) return <EmptyState title="No quiz available" description="Choose another grammar topic in Learn, or generate an AI practice set from Practice." />
-  const check = async () => { const correct = normalizeAnswer(answer) === normalizeAnswer(question.correctAnswer); setResult(correct); if (correct) setScore(score + 1); await updateTopicConfidence(topic.id, correct, answer, question.promptEn); await onRefresh() }
-  const next = () => { if (index + 1 >= questions.length) void onDone(Math.round(score / questions.length * 100)); else { setIndex(index + 1); setAnswer(''); setResult(null) } }
-  return <div className="exercise"><span className="eyebrow">Question {index + 1} of {questions.length} · {topic.titleEn}</span><h3>{snapshot.settings.languageMode === 'fr' ? question.promptFr : question.promptEn}</h3>{question.choices ? <div className="choice-grid">{question.choices.map((choice) => <button className={answer === choice ? 'selected' : ''} key={choice} disabled={result !== null} onClick={() => setAnswer(choice)}>{choice}</button>)}</div> : <input className="large-input" value={answer} disabled={result !== null} onChange={(event) => setAnswer(event.target.value)} placeholder="Type your answer" />}{result !== null && <Feedback correct={result} answer={question.correctAnswer} explanation={snapshot.settings.languageMode === 'fr' ? question.explanationFr : question.explanationEn} />}{result === null ? <button className="primary-button" disabled={!answer} onClick={() => void check()}>Check answer</button> : <button className="primary-button" onClick={next}>{index + 1 >= questions.length ? 'Finish activity' : 'Next question'}</button>}</div>
+  const percent = Math.round((score / questions.length) * 100)
+  const check = async () => {
+    const correct = normalizeAnswer(answer) === normalizeAnswer(question.correctAnswer)
+    setResult(correct)
+    setScore((current) => current + (correct ? 1 : 0))
+    await updateTopicConfidence(topic.id, correct, answer, question.promptEn)
+    await onRefresh()
+  }
+  const next = () => {
+    if (index + 1 >= questions.length) setFinished(true)
+    else { setIndex(index + 1); setAnswer(''); setResult(null) }
+  }
+  const restart = () => {
+    setQuizToken(crypto.randomUUID())
+    setIndex(0)
+    setAnswer('')
+    setResult(null)
+    setScore(0)
+    setFinished(false)
+  }
+  if (finished) return <div className="exercise quiz-summary"><span className="eyebrow">Manual grammar quiz complete</span><h3>{topic.titleEn}</h3><div className="summary-score"><strong>{score}/{questions.length}</strong><span>{percent}%</span></div><p>{percent >= 80 ? 'Strong result. Repeat later to keep the rule active.' : percent >= 60 ? 'Good start. Review the detailed lesson and try another set.' : 'Review the lesson carefully, especially the common mistakes, then repeat the quiz.'}</p><div className="button-row"><button className="secondary-button" onClick={restart}>Start another 10-question set</button><button className="primary-button" onClick={() => void onDone(percent)}>Finish quiz</button></div></div>
+  return <div className="exercise"><span className="eyebrow">Question {index + 1} of {questions.length} · {topic.titleEn}</span><div className="quiz-progress"><span style={{ width: `${((index + (result === null ? 0 : 1)) / questions.length) * 100}%` }} /></div><h3>{snapshot.settings.languageMode === 'fr' ? question.promptFr : question.promptEn}</h3>{question.choices ? <div className="choice-grid">{question.choices.map((choice) => <button className={answer === choice ? 'selected' : ''} key={choice} disabled={result !== null} onClick={() => setAnswer(choice)}>{choice}</button>)}</div> : <input className="large-input" value={answer} disabled={result !== null} onChange={(event) => setAnswer(event.target.value)} placeholder="Type your answer" />}{result !== null && <Feedback correct={result} answer={question.correctAnswer} explanation={snapshot.settings.languageMode === 'fr' ? question.explanationFr : question.explanationEn} />}{result === null ? <button className="primary-button" disabled={!answer} onClick={() => void check()}>Check answer</button> : <button className="primary-button" onClick={next}>{index + 1 >= questions.length ? 'See quiz result' : 'Next question'}</button>}</div>
 }
 
 function VocabularyWorkspace({ snapshot, contentId, onDone, onRefresh }: { snapshot: LearningSnapshot; contentId?: string; onDone: (score?: number) => Promise<void>; onRefresh: () => Promise<void> }) {
@@ -456,6 +497,31 @@ function ProgressRing({ value }: { value: number }) { return <div className="pro
 function StatCard({ label, value, detail }: { label: string; value: string; detail: string }) { return <article className="stat-card"><span>{label}</span><strong>{value}</strong><small>{detail}</small></article> }
 function ProgressLine({ topic }: { topic: SkillTopic }) { return <div className="progress-line"><div><strong>{topic.titleEn}</strong><small>{topic.level} · {topic.area}</small></div><Meter value={topic.confidence} /><b>{topic.confidence}%</b></div> }
 function SpeakButton({ text, enabled, label = 'Play audio' }: { text: string; enabled: boolean; label?: string }) { const speak = () => { if (!enabled || !('speechSynthesis' in window)) return; window.speechSynthesis.cancel(); const utterance = new SpeechSynthesisUtterance(text); utterance.lang = 'fr-FR'; window.speechSynthesis.speak(utterance) }; return <button type="button" className="speak-button" disabled={!enabled} onClick={speak}>♪ {label}</button> }
+
+function buildManualQuiz<T>(items: T[], token: string, count: number) {
+  const random = seededRandom(hashString(token))
+  return [...items].sort(() => random() - 0.5).slice(0, count)
+}
+
+function hashString(value: string) {
+  let hash = 2166136261
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return hash >>> 0
+}
+
+function seededRandom(initialSeed: number) {
+  let seed = initialSeed || 1
+  return () => {
+    seed += 0x6D2B79F5
+    let value = seed
+    value = Math.imul(value ^ (value >>> 15), value | 1)
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61)
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296
+  }
+}
 
 function makeVerbRounds(verbs: VerbEntry[], count: number) {
   const persons = ['je', 'tu', 'il/elle', 'nous', 'vous', 'ils/elles']
