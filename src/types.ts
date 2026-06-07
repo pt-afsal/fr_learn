@@ -1,17 +1,41 @@
 export type ViewId =
-  | 'dashboard'
-  | 'grammar'
-  | 'vocabulary'
-  | 'conjugation'
+  | 'today'
+  | 'plan'
+  | 'learn'
   | 'practice'
-  | 'studio'
+  | 'progress'
   | 'settings'
 
 export type CefrLevel = 'A1' | 'A2' | 'B1' | 'B2'
+export type LearningLevel = Exclude<CefrLevel, 'B2'>
+export type TargetLevel = 'A2' | 'B1' | 'B1-mastery'
 export type LanguageMode = 'en' | 'fr'
-export type ItemType = 'grammar' | 'vocabulary' | 'conjugation'
+export type AiProvider = 'disabled' | 'ollama'
 export type QuestionType = 'multiple-choice' | 'fill'
-export type AiProvider = 'disabled' | 'ollama' | 'groq' | 'gemini'
+export type DayKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
+export type CoreItemType = 'grammar' | 'vocabulary' | 'conjugation'
+export type ActivityType =
+  | 'grammar-lesson'
+  | 'grammar-practice'
+  | 'vocabulary-review'
+  | 'conjugation'
+  | 'reading'
+  | 'writing'
+  | 'pronunciation'
+  | 'weekly-review'
+export type ItemType = CoreItemType | ActivityType
+
+export const dayKeys: DayKey[] = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+]
+
+export type WeeklyAvailability = Record<DayKey, number>
 
 export interface SkillTopic {
   id: string
@@ -27,6 +51,7 @@ export interface SkillTopic {
   prerequisites?: string[]
   estimatedMinutes?: number
   sequence?: number
+  source?: 'seed' | 'totem' | 'personal'
 }
 
 export interface Question {
@@ -50,6 +75,8 @@ export interface VocabDeck {
   difficulty?: number
   estimatedMinutes?: number
   sequence?: number
+  source?: 'seed' | 'totem' | 'personal'
+  dossierId?: string
 }
 
 export interface VocabCard {
@@ -81,6 +108,7 @@ export interface VerbEntry {
   difficulty?: number
   estimatedMinutes?: number
   sequence?: number
+  source?: 'seed' | 'totem' | 'personal'
 }
 
 export interface AttemptLog {
@@ -95,16 +123,126 @@ export interface AttemptLog {
 
 export interface UserSettings {
   id: 'main'
-  currentLevel: CefrLevel
-  targetLevel: CefrLevel
-  weeklyStudyHours: number
-  studyDaysPerWeek: number
+  learnerName: string
+  onboardingCompleted: boolean
+  currentLevel: LearningLevel
+  targetLevel: TargetLevel
+  weeklyAvailability: WeeklyAvailability
   languageMode: LanguageMode
   speechEnabled: boolean
   speechRecognitionEnabled: boolean
   aiProvider: AiProvider
   aiModel: string
   ollamaHost: string
+  // Kept for migration from the original project.
+  weeklyStudyHours?: number
+  studyDaysPerWeek?: number
+}
+
+export interface PlannedTask {
+  id: string
+  date: string
+  type: ActivityType
+  title: string
+  detail: string
+  estimatedMinutes: number
+  contentId?: string
+  source: 'planner' | 'curated' | 'ai'
+  optional?: boolean
+}
+
+export interface TaskCompletion {
+  id: string
+  taskId: string
+  date: string
+  completedAt: string
+  score?: number
+}
+
+export interface ReadingQuestion {
+  id: string
+  prompt?: string
+  promptFr?: string
+  promptEn?: string
+  choices: string[]
+  correctAnswer: string
+  explanation?: string
+  explanationFr?: string
+  explanationEn?: string
+}
+
+export interface ReadingExercise {
+  id: string
+  level: CefrLevel
+  title?: string
+  titleFr?: string
+  titleEn?: string
+  theme?: string
+  text: string
+  questions: ReadingQuestion[]
+  vocabularyHighlights?: Array<{ term: string; meaning: string }>
+  grammarTags?: string[]
+  estimatedMinutes?: number
+  generated?: boolean
+}
+
+export interface ReadingAttempt {
+  id: string
+  exerciseId: string
+  answers: Record<string, string>
+  score: number
+  completedAt: string
+}
+
+export interface WritingPrompt {
+  id: string
+  level: CefrLevel
+  title?: string
+  titleFr?: string
+  titleEn?: string
+  descriptionFr?: string
+  descriptionEn?: string
+  wordCountTarget?: number
+  grammarChecklist?: string[]
+  starterSentence?: string
+  modelAnswerStructure?: string
+  task?: string
+  checklist?: string[]
+  starter?: string
+}
+
+export interface WritingScores {
+  taskCompletion: number
+  grammar: number
+  vocabulary: number
+  clarity: number
+}
+
+export interface WritingEvaluation {
+  scores: WritingScores
+  correctedText: string
+  importantMistakes: Array<{ original: string; correction: string; explanation: string }>
+  rewritePractice: string[]
+  positiveComment: string
+  recommendedGrammarTopic: string
+}
+
+export interface WritingAttempt {
+  id: string
+  promptId: string
+  originalText: string
+  correctedText?: string
+  feedback?: WritingEvaluation
+  completedAt: string
+}
+
+export interface PronunciationAttempt {
+  id: string
+  expectedText: string
+  recognizedText: string
+  similarity: number
+  feedback?: string
+  completedAt: string
 }
 
 export interface LearningSnapshot {
@@ -114,15 +252,53 @@ export interface LearningSnapshot {
   cards: VocabCard[]
   verbs: VerbEntry[]
   attempts: AttemptLog[]
+  taskCompletions: TaskCompletion[]
+  writingAttempts: WritingAttempt[]
+  readingAttempts: ReadingAttempt[]
+  pronunciationAttempts: PronunciationAttempt[]
+  generatedReadings: ReadingExercise[]
   settings: UserSettings
 }
 
-export interface Mission {
-  id: string
-  type: ItemType
+export interface AiConfig {
+  provider: AiProvider
+  model: string
+  host: string
+}
+
+export interface AiReadingRequest {
+  level: LearningLevel
+  topic: string
+  grammarFocus?: string
+}
+
+export interface AiPracticeRequest {
+  level: LearningLevel
+  kind: 'grammar' | 'vocabulary' | 'conjugation'
+  focus: string
+}
+
+export interface AiPracticeExercise {
   title: string
-  detail: string
-  progress: number
-  action: string
-  targetView: ViewId
+  instructions: string
+  questions: Array<{
+    prompt: string
+    choices?: string[]
+    correctAnswer: string
+    explanation: string
+  }>
+}
+
+export interface CurriculumDossier {
+  id: string
+  level: CefrLevel
+  totemLevel?: string | number
+  number: number
+  titleFr: string
+  titleEn: string
+  grammarTopicIds: string[]
+  vocabDeckIds: string[]
+  verbIds: string[]
+  communicativeFunctions: string[]
+  phoneticsNotes?: string
 }

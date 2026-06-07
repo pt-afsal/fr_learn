@@ -1,4 +1,5 @@
 import { a2B1QuestionBank, a2B1Topics, completeQuestionSets } from './a2B1Curriculum'
+import { enrichedQuestions } from './enrichedQuiz'
 import { extraCards, extraDecks, extraQuestions, extraTopics } from './expandedSeed'
 import { applyDetailedGrammarTopics } from './grammarDetails'
 import type { Question, SkillTopic, UserSettings, VocabCard, VocabDeck, VerbEntry } from './types'
@@ -7,15 +8,24 @@ const today = new Date().toISOString()
 
 export const defaultSettings: UserSettings = {
   id: 'main',
+  learnerName: '',
+  onboardingCompleted: false,
   currentLevel: 'A2',
   targetLevel: 'B1',
-  weeklyStudyHours: 5,
-  studyDaysPerWeek: 5,
+  weeklyAvailability: {
+    monday: 60,
+    tuesday: 60,
+    wednesday: 0,
+    thursday: 60,
+    friday: 30,
+    saturday: 120,
+    sunday: 30,
+  },
   languageMode: 'en',
   speechEnabled: true,
   speechRecognitionEnabled: true,
   aiProvider: 'disabled',
-  aiModel: 'llama3.1',
+  aiModel: 'gemma4:e2b-it-q4_K_M',
   ollamaHost: 'http://localhost:11434',
 }
 
@@ -613,7 +623,7 @@ seedVerbs.push(
 
 seedTopics.push(...extraTopics, ...a2B1Topics)
 applyDetailedGrammarTopics(seedTopics)
-seedQuestions.push(...extraQuestions, ...a2B1QuestionBank)
+seedQuestions.push(...extraQuestions, ...a2B1QuestionBank, ...enrichedQuestions)
 seedQuestions.push(...completeQuestionSets(seedTopics, seedQuestions))
 seedDecks.push(...extraDecks)
 seedCards.push(...extraCards)
