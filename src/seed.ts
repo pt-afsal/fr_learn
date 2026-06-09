@@ -27,6 +27,7 @@ export const defaultSettings: UserSettings = {
   aiProvider: 'disabled',
   aiModel: 'gemma4:e2b-it-q4_K_M',
   ollamaHost: 'http://localhost:11434',
+  ollamaTimeoutMs: 600000,
 }
 
 export const seedTopics: SkillTopic[] = [

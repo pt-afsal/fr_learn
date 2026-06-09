@@ -1,2008 +1,787 @@
 /**
- * Enriched Quiz Questions
- * Inspired by FrancaisFacile.com, Lingua.com, and other French-learning resources.
- * Questions use real-life contexts (restaurant, travel, daily routine, work, etc.)
- * and include more distractor traps, transformation tasks, and nuanced choices
- * to reduce predictability.
+ * French Path grammar bank v2
+ *
+ * 5,000 original, topic-specific questions generated from curated French
+ * grammar patterns. The questions are intentionally created locally rather
+ * than copied from exercise websites. Every question tests an actual rule:
+ * agreement, article choice, tense, word order, pronoun replacement,
+ * transformation, register, or meaning in context.
  */
 import type { Question } from './types'
 
-type QuestionRow = [
-  topicId: string,
-  type: Question['type'],
-  promptEn: string,
-  promptFr: string,
-  choices: string[] | undefined,
-  correctAnswer: string,
-  explanationEn: string,
-  explanationFr: string,
+type Group =
+  | 'articlesGender'
+  | 'definiteArticles'
+  | 'indefiniteArticles'
+  | 'contractedArticles'
+  | 'pluralNouns'
+  | 'adjectiveAgreement'
+  | 'possessives'
+  | 'presentEr'
+  | 'etreAvoir'
+  | 'questionForms'
+  | 'interrogativeAdverbs'
+  | 'answerSi'
+  | 'interrogativePronouns'
+  | 'presentContinuous'
+  | 'imperative'
+  | 'futureProche'
+  | 'passeCompose'
+  | 'passeComposeAvoir'
+  | 'passeComposeEtre'
+  | 'imparfait'
+  | 'pcVsImparfait'
+  | 'recentPast'
+  | 'plusQueParfait'
+  | 'passeSimple'
+  | 'objectPronouns'
+  | 'pronounPlacement'
+  | 'yEn'
+  | 'doublePronouns'
+  | 'relativeSimple'
+  | 'relativeComplex'
+  | 'demonstratives'
+  | 'indefinites'
+  | 'conditionalPoliteness'
+  | 'futureSimple'
+  | 'irregularFuture'
+  | 'siPresentFuture'
+  | 'siHypothesis'
+  | 'subjunctiveObligation'
+  | 'timeChronology'
+  | 'timeExpressions'
+  | 'prepositions'
+  | 'negation'
+  | 'adverbs'
+  | 'gerund'
+  | 'reportedSpeech'
+  | 'comparative'
+  | 'superlative'
+  | 'connectors'
+  | 'cause'
+  | 'nominalisation'
+  | 'passive'
+  | 'register'
+  | 'truncation'
+  | 'presentatives'
+  | 'cEstIlEst'
+  | 'cleft'
+  | 'mixed'
+
+type TopicSpec = { id: string; titleEn: string; titleFr: string; group: Group }
+type Noun = { noun: string; gender: 'm' | 'f'; plural: string; vowel?: boolean; adjective?: string }
+type Adjective = { m: string; f: string; mp: string; fp: string }
+type Person = { subject: string; index: number }
+type QData = Omit<Question, 'id' | 'topicId'>
+
+const topics: TopicSpec[] = [
+  ['articles-gender', 'Articles and gender', 'Articles et genre', 'articlesGender'],
+  ['definite-articles-a1', 'Definite articles', 'Articles définis', 'definiteArticles'],
+  ['indefinite-articles-a1', 'Indefinite articles', 'Articles indéfinis', 'indefiniteArticles'],
+  ['contracted-articles-a1', 'Contracted articles', 'Articles contractés', 'contractedArticles'],
+  ['plural-nouns-a1', 'Plural nouns', 'Noms pluriels', 'pluralNouns'],
+  ['adjective-agreement-a1', 'Adjective agreement', 'Accord de l’adjectif', 'adjectiveAgreement'],
+  ['present-er', 'Present tense: -er verbs', 'Présent des verbes en -er', 'presentEr'],
+  ['etre-avoir', 'Être and avoir', 'Être et avoir', 'etreAvoir'],
+  ['questions', 'Question forms', 'Formes de question', 'questionForms'],
+  ['passe-compose', 'Passé composé', 'Passé composé', 'passeCompose'],
+  ['imparfait', 'Imparfait', 'Imparfait', 'imparfait'],
+  ['object-pronouns', 'Object pronouns', 'Pronoms compléments', 'objectPronouns'],
+  ['y-en', 'Y and en', 'Y et en', 'yEn'],
+  ['relative-pronouns', 'Relative pronouns', 'Pronoms relatifs', 'relativeSimple'],
+  ['conditional', 'Conditional', 'Conditionnel', 'conditionalPoliteness'],
+  ['subjunctive', 'Subjunctive', 'Subjonctif', 'subjunctiveObligation'],
+  ['si-clauses', 'Si clauses', 'Phrases avec si', 'siHypothesis'],
+  ['presentatifs-a1', 'Presentatives', 'Présentatifs', 'presentatives'],
+  ['interrogative-adverbs-a1', 'Interrogative adverbs', 'Adverbes interrogatifs', 'interrogativeAdverbs'],
+  ['question-answer-si-a1', 'Answering negative questions with si', 'Répondre avec si', 'answerSi'],
+  ['conditionnel-politesse-a1', 'Polite conditional', 'Conditionnel de politesse', 'conditionalPoliteness'],
+  ['present-continuous-a1', 'Être en train de', 'Présent continu', 'presentContinuous'],
+  ['time-chronology-a1', 'Time and chronology', 'Temps et chronologie', 'timeChronology'],
+  ['c-est-il-est-a1', 'C’est and il est', 'C’est et il est', 'cEstIlEst'],
+  ['possessive-adjectives-a1', 'Possessive adjectives', 'Adjectifs possessifs', 'possessives'],
+  ['imperative-a1', 'Imperative', 'Impératif', 'imperative'],
+  ['futur-proche-a1', 'Near future', 'Futur proche', 'futureProche'],
+  ['passe-compose-a1', 'Passé composé A1', 'Passé composé A1', 'passeCompose'],
+  ['truncation-a2', 'Truncation in informal French', 'Troncation', 'truncation'],
+  ['negation-varied-a2', 'Varied negation', 'Négation variée', 'negation'],
+  ['prepositions-a2', 'Prepositions', 'Prépositions', 'prepositions'],
+  ['relative-qui-que-ou-a2', 'Qui, que and où', 'Qui, que et où', 'relativeSimple'],
+  ['focus-cleft-a2', 'Cleft focus', 'Mise en relief', 'cleft'],
+  ['pronoun-placement-a2', 'Pronoun placement', 'Place des pronoms', 'pronounPlacement'],
+  ['y-en-intro-a2', 'Intro to y and en', 'Introduction à y et en', 'yEn'],
+  ['indefinites-a2', 'Indefinites', 'Indéfinis', 'indefinites'],
+  ['interrogative-pronouns-a2', 'Interrogative pronouns', 'Pronoms interrogatifs', 'interrogativePronouns'],
+  ['demonstrative-pronouns-a2', 'Demonstrative pronouns', 'Pronoms démonstratifs', 'demonstratives'],
+  ['adverbs-a2', 'Adverbs', 'Adverbes', 'adverbs'],
+  ['gerondif-intro-a2', 'Gérondif introduction', 'Introduction au gérondif', 'gerund'],
+  ['passe-compose-avoir-a2', 'Passé composé with avoir', 'Passé composé avec avoir', 'passeComposeAvoir'],
+  ['passe-compose-etre-a2', 'Passé composé with être', 'Passé composé avec être', 'passeComposeEtre'],
+  ['pc-imparfait-a2', 'Passé composé vs imparfait', 'Passé composé ou imparfait', 'pcVsImparfait'],
+  ['time-expressions-a2', 'Time expressions', 'Expressions de temps', 'timeExpressions'],
+  ['passe-recent-a2', 'Recent past', 'Passé récent', 'recentPast'],
+  ['future-simple-intro-a2', 'Future simple', 'Futur simple', 'futureSimple'],
+  ['si-present-future-a2', 'Si + present + future', 'Si + présent + futur', 'siPresentFuture'],
+  ['obligation-expressions-a2', 'Obligation expressions', 'Expressions de l’obligation', 'subjunctiveObligation'],
+  ['conditional-politeness-a2', 'Polite conditional', 'Conditionnel de politesse', 'conditionalPoliteness'],
+  ['reported-speech-a2', 'Reported speech', 'Discours rapporté', 'reportedSpeech'],
+  ['comparative-a2', 'Comparative', 'Comparatif', 'comparative'],
+  ['superlative-a2', 'Superlative', 'Superlatif', 'superlative'],
+  ['connectors-a2', 'Connectors', 'Connecteurs', 'connectors'],
+  ['modes-register-a2', 'Modes and register', 'Modes et registres', 'register'],
+  ['articles-adjectives-b1', 'Articles and adjectives B1', 'Articles et adjectifs B1', 'adjectiveAgreement'],
+  ['nominalisation-b1', 'Nominalisation', 'Nominalisation', 'nominalisation'],
+  ['nominalization-b1', 'Nominalization', 'Nominalisation', 'nominalisation'],
+  ['truncation-b1', 'Truncation B1', 'Troncation B1', 'truncation'],
+  ['negation-b1', 'Negation B1', 'Négation B1', 'negation'],
+  ['prepositions-b1', 'Prepositions B1', 'Prépositions B1', 'prepositions'],
+  ['relative-simple-b1', 'Simple relatives B1', 'Relatives simples B1', 'relativeSimple'],
+  ['relative-complex-b1', 'Complex relatives', 'Relatives complexes', 'relativeComplex'],
+  ['focus-cleft-b1', 'Cleft focus B1', 'Mise en relief B1', 'cleft'],
+  ['object-pronouns-b1', 'Object pronouns B1', 'Pronoms compléments B1', 'objectPronouns'],
+  ['y-en-b1', 'Y and en B1', 'Y et en B1', 'yEn'],
+  ['double-pronouns-b1', 'Double pronouns', 'Doubles pronoms', 'doublePronouns'],
+  ['indefinites-b1', 'Indefinites B1', 'Indéfinis B1', 'indefinites'],
+  ['interrogative-pronouns-b1', 'Interrogative pronouns B1', 'Pronoms interrogatifs B1', 'interrogativePronouns'],
+  ['demonstrative-pronouns-b1', 'Demonstrative pronouns B1', 'Pronoms démonstratifs B1', 'demonstratives'],
+  ['adverbs-modalization-b1', 'Adverbs and modalisation', 'Adverbes et modalisation', 'adverbs'],
+  ['gerund-b1', 'Gérondif B1', 'Gérondif B1', 'gerund'],
+  ['plus-que-parfait-b1', 'Plus-que-parfait', 'Plus-que-parfait', 'plusQueParfait'],
+  ['passe-simple-b1', 'Passé simple', 'Passé simple', 'passeSimple'],
+  ['passive-b1', 'Passive voice', 'Voix passive', 'passive'],
+  ['time-connectors-b1', 'Time connectors', 'Connecteurs temporels', 'timeExpressions'],
+  ['future-conditional-b1', 'Future and conditional B1', 'Futur et conditionnel B1', 'futureSimple'],
+  ['hypothesis-obligation-b1', 'Hypothesis and obligation', 'Hypothèse et obligation', 'siHypothesis'],
+  ['opinion-argument-b1', 'Opinion and argument', 'Opinion et argumentation', 'connectors'],
+  ['futur-simple-irregular-b1', 'Irregular future', 'Futur irrégulier', 'irregularFuture'],
+  ['cause-expressions-b1', 'Cause expressions', 'Expressions de la cause', 'cause'],
+  ['t1-d0', 'Totem A1 starter grammar', 'Grammaire de départ', 'presentatives'],
+  ['t1-d1', 'Identity and greetings', 'Identité et salutations', 'etreAvoir'],
+  ['t1-d2', 'Daily actions', 'Actions quotidiennes', 'presentEr'],
+  ['t1-d3', 'Family and description', 'Famille et description', 'adjectiveAgreement'],
+  ['t1-d4', 'Places and directions', 'Lieux et directions', 'prepositions'],
+  ['t1-d5', 'Food and quantities', 'Nourriture et quantités', 'indefiniteArticles'],
+  ['t1-d6', 'Past events starter', 'Événements passés', 'passeCompose'],
+  ['t2-d1', 'A2 review grammar', 'Révision A2', 'mixed'],
+  ['t2-d2', 'A2 questions', 'Questions A2', 'questionForms'],
+  ['t2-d3', 'A2 narration', 'Récit A2', 'pcVsImparfait'],
+  ['t2-d4', 'A2 pronouns', 'Pronoms A2', 'pronounPlacement'],
+  ['t2-d5', 'A2 time', 'Temps A2', 'timeExpressions'],
+  ['t2-d6', 'A2 comparison', 'Comparaison A2', 'comparative'],
+  ['t2-d7', 'A2 connectors', 'Connecteurs A2', 'connectors'],
+  ['t2-d8', 'A2 final grammar', 'Synthèse A2', 'mixed'],
+  ['t3-d1', 'B1 opinions', 'Opinions B1', 'connectors'],
+  ['t3-d2', 'B1 complex pronouns', 'Pronoms complexes B1', 'doublePronouns'],
+  ['t3-d3', 'B1 hypothesis', 'Hypothèse B1', 'siHypothesis'],
+  ['t3-d4', 'B1 passive and formal style', 'Passif et style formel', 'passive'],
+  ['t3-d5', 'B1 relatives', 'Relatives B1', 'relativeComplex'],
+  ['t3-d6', 'B1 reported speech', 'Discours rapporté B1', 'reportedSpeech'],
+  ['t3-d7', 'B1 nuance', 'Nuance B1', 'adverbs'],
+  ['t3-d8', 'B1 synthesis', 'Synthèse B1', 'mixed'],
+].map(([id, titleEn, titleFr, group]) => ({ id, titleEn, titleFr, group } as TopicSpec))
+
+const nouns: Noun[] = [
+  { noun: 'livre', gender: 'm', plural: 'livres' }, { noun: 'table', gender: 'f', plural: 'tables' },
+  { noun: 'problème', gender: 'm', plural: 'problèmes' }, { noun: 'solution', gender: 'f', plural: 'solutions' },
+  { noun: 'voiture', gender: 'f', plural: 'voitures' }, { noun: 'bureau', gender: 'm', plural: 'bureaux' },
+  { noun: 'journal', gender: 'm', plural: 'journaux' }, { noun: 'adresse', gender: 'f', plural: 'adresses', vowel: true },
+  { noun: 'hôtel', gender: 'm', plural: 'hôtels', vowel: true }, { noun: 'équipe', gender: 'f', plural: 'équipes', vowel: true },
+  { noun: 'appartement', gender: 'm', plural: 'appartements', vowel: true }, { noun: 'expérience', gender: 'f', plural: 'expériences', vowel: true },
+  { noun: 'laboratoire', gender: 'm', plural: 'laboratoires' }, { noun: 'réunion', gender: 'f', plural: 'réunions' },
+  { noun: 'château', gender: 'm', plural: 'châteaux' }, { noun: 'animal', gender: 'm', plural: 'animaux' },
+  { noun: 'prix', gender: 'm', plural: 'prix' }, { noun: 'nez', gender: 'm', plural: 'nez' },
+  { noun: 'soupe', gender: 'f', plural: 'soupes' }, { noun: 'fromage', gender: 'm', plural: 'fromages' },
+  { noun: 'idée', gender: 'f', plural: 'idées', vowel: true }, { noun: 'exercice', gender: 'm', plural: 'exercices', vowel: true },
+  { noun: 'question', gender: 'f', plural: 'questions' }, { noun: 'message', gender: 'm', plural: 'messages' },
 ]
 
-export const enrichedQuestions: Question[] = (
-  [
-    // ── ARTICLES AND GENDER ──────────────────────────────────────────────────
-    [
-      'articles-gender',
-      'multiple-choice',
-      'At a café, the waiter asks: "Vous prenez ___ café ou ___ thé ?" Choose the correct articles.',
-      'Au café, le serveur demande : « Vous prenez ___ café ou ___ thé ? » Choisissez les bons articles.',
-      ['le / le', 'un / un', 'la / le', 'un / la'],
-      'un / un',
-      'Both café and thé are masculine singular nouns introduced for the first time, so use un.',
-      'Café et thé sont des noms masculins singuliers introduits pour la première fois, donc on utilise un.',
-    ],
-    [
-      'articles-gender',
-      'multiple-choice',
-      'Which noun is feminine? (Think of its article in French.)',
-      'Quel nom est féminin ? (Pensez à son article en français.)',
-      ['le problème', 'la solution', 'le résultat', 'le numéro'],
-      'la solution',
-      'La solution is feminine; problème, résultat, and numéro are masculine.',
-      'La solution est féminin ; problème, résultat et numéro sont masculins.',
-    ],
-    [
-      'articles-gender',
-      'fill',
-      'Complete: Je prends ___ eau minérale, s\'il vous plaît. (use the correct definite article)',
-      'Complétez : Je prends ___ eau minérale, s\'il vous plaît.',
-      undefined,
-      'l\'',
-      'Eau begins with a vowel, so the article elides to l\'.',
-      'Eau commence par une voyelle, donc l\'article s\'élide en l\'.',
-    ],
-    [
-      'articles-gender',
-      'multiple-choice',
-      'You are reading a menu. Which phrase uses the article correctly?',
-      'Vous lisez un menu. Quelle phrase utilise l\'article correctement ?',
-      ['Je voudrais le soupe du jour.', 'Je voudrais la soupe du jour.', 'Je voudrais un soupe du jour.', 'Je voudrais des soupe du jour.'],
-      'Je voudrais la soupe du jour.',
-      'Soupe is feminine, so la soupe is correct.',
-      'Soupe est féminin, donc la soupe est correct.',
-    ],
-
-    // ── DEFINITE ARTICLES ────────────────────────────────────────────────────
-    [
-      'definite-articles-a1',
-      'multiple-choice',
-      'Your friend says she loves cheese. Choose the correct sentence in French.',
-      'Votre amie dit qu\'elle adore le fromage. Choisissez la bonne phrase en français.',
-      ['Elle adore du fromage.', 'Elle adore un fromage.', 'Elle adore le fromage.', 'Elle adore de fromage.'],
-      'Elle adore le fromage.',
-      'For general likes and preferences in French, use the definite article: le fromage.',
-      'Pour exprimer des goûts en français, on utilise l\'article défini : le fromage.',
-    ],
-    [
-      'definite-articles-a1',
-      'fill',
-      'Complete: ___ vacances en France sont magnifiques !',
-      'Complétez : ___ vacances en France sont magnifiques !',
-      undefined,
-      'Les',
-      'Vacances is a plural noun; use les.',
-      'Vacances est un nom pluriel ; on utilise les.',
-    ],
-    [
-      'definite-articles-a1',
-      'multiple-choice',
-      'Which sentence correctly states a general fact?',
-      'Quelle phrase exprime correctement un fait général ?',
-      ['Les chats sont des animaux indépendants.', 'Des chats sont des animaux indépendants.', 'Un chat est des animaux indépendants.', 'De chats sont des animaux indépendants.'],
-      'Les chats sont des animaux indépendants.',
-      'General statements about a whole category use les.',
-      'Les énoncés généraux sur une catégorie entière utilisent les.',
-    ],
-
-    // ── INDEFINITE ARTICLES ──────────────────────────────────────────────────
-    [
-      'indefinite-articles-a1',
-      'multiple-choice',
-      'You are describing your apartment for the first time. Choose the correct sentence.',
-      'Vous décrivez votre appartement pour la première fois. Choisissez la bonne phrase.',
-      ['Il y a le balcon.', 'Il y a un balcon.', 'Il y a balcon.', 'Il y a du balcon.'],
-      'Il y a un balcon.',
-      'When introducing something for the first time, use the indefinite article un.',
-      'Quand on présente quelque chose pour la première fois, on utilise l\'article indéfini un.',
-    ],
-    [
-      'indefinite-articles-a1',
-      'multiple-choice',
-      'In the negative, what happens to "un" and "une"? → Je n\'ai pas ___ voiture.',
-      'À la forme négative, que devient « un » et « une » ? → Je n\'ai pas ___ voiture.',
-      ['un', 'une', 'de', 'la'],
-      'de',
-      'After a negation, un/une/des become de or d\'.',
-      'Après la négation, un/une/des deviennent de ou d\'.',
-    ],
-
-    // ── CONTRACTED ARTICLES ──────────────────────────────────────────────────
-    [
-      'contracted-articles-a1',
-      'multiple-choice',
-      'You want to go to the market. Which is correct?',
-      'Vous voulez aller au marché. Laquelle est correcte ?',
-      ['Je vais à le marché.', 'Je vais au marché.', 'Je vais à la marché.', 'Je vais du marché.'],
-      'Je vais au marché.',
-      'À + le = au. "À le" is never used in French.',
-      'À + le = au. « À le » ne s\'utilise jamais en français.',
-    ],
-    [
-      'contracted-articles-a1',
-      'fill',
-      'Complete: Le professeur parle ___ étudiants. (à + les)',
-      'Complétez : Le professeur parle ___ étudiants. (à + les)',
-      undefined,
-      'aux',
-      'À + les contracts to aux.',
-      'À + les se contracte en aux.',
-    ],
-    [
-      'contracted-articles-a1',
-      'multiple-choice',
-      'Choose: I am coming back from the cinema.',
-      'Choisissez : Je reviens ___ cinéma.',
-      ['de le cinéma', 'du cinéma', 'de la cinéma', 'des cinéma'],
-      'du cinéma',
-      'De + le = du. Cinéma is masculine.',
-      'De + le = du. Cinéma est masculin.',
-    ],
-
-    // ── PLURAL NOUNS ─────────────────────────────────────────────────────────
-    [
-      'plural-nouns-a1',
-      'multiple-choice',
-      'What is the plural of "un journal" (newspaper)?',
-      'Quel est le pluriel de « un journal » (un journal) ?',
-      ['des journaux', 'des journals', 'des journales', 'des journalx'],
-      'des journaux',
-      'Nouns ending in -al change to -aux in the plural: journal → journaux.',
-      'Les noms en -al deviennent -aux au pluriel : journal → journaux.',
-    ],
-    [
-      'plural-nouns-a1',
-      'fill',
-      'Make plural: un château → des ___',
-      'Mettez au pluriel : un château → des ___',
-      undefined,
-      'châteaux',
-      'Nouns ending in -eau add -x: château → châteaux.',
-      'Les noms en -eau prennent -x : château → châteaux.',
-    ],
-    [
-      'plural-nouns-a1',
-      'multiple-choice',
-      'Which noun does NOT change in the plural?',
-      'Quel nom ne change PAS au pluriel ?',
-      ['un chat', 'un bras', 'un arbre', 'un livre'],
-      'un bras',
-      'Bras already ends in -s, so the plural form is identical: des bras.',
-      'Bras se termine déjà par -s, donc le pluriel est identique : des bras.',
-    ],
-
-    // ── ADJECTIVE AGREEMENT ──────────────────────────────────────────────────
-    [
-      'adjective-agreement-a1',
-      'multiple-choice',
-      'Describe the house: "La maison est ___." (new)',
-      'Décrivez la maison : « La maison est ___ ». (nouvelle)',
-      ['neuf', 'neuve', 'nouvelle', 'novelle'],
-      'nouvelle',
-      'Nouveau / nouvelle is the correct feminine form for "new".',
-      'Nouveau / nouvelle est la forme féminine correcte pour « new ».',
-    ],
-    [
-      'adjective-agreement-a1',
-      'fill',
-      'Complete: Ces étudiantes sont très ___ (sérieux).',
-      'Complétez : Ces étudiantes sont très ___ (sérieux).',
-      undefined,
-      'sérieuses',
-      'Feminine plural of sérieux is sérieuses.',
-      'Le féminin pluriel de sérieux est sérieuses.',
-    ],
-    [
-      'adjective-agreement-a1',
-      'multiple-choice',
-      'Which sentence has a correctly agreed adjective?',
-      'Quelle phrase a un adjectif correctement accordé ?',
-      [
-        'Les garçons sont contente.',
-        'Les filles sont contents.',
-        'Les filles sont contentes.',
-        'Le garçon sont content.',
-      ],
-      'Les filles sont contentes.',
-      'Filles is feminine plural, so the adjective takes -es: contentes.',
-      'Filles est féminin pluriel, donc l\'adjectif prend -es : contentes.',
-    ],
-    [
-      'adjective-agreement-a1',
-      'multiple-choice',
-      'What is the feminine form of "bon" ?',
-      'Quelle est la forme féminine de « bon » ?',
-      ['bone', 'bonne', 'bons', 'bonnes'],
-      'bonne',
-      'Bon → bonne (doubles the final consonant before adding -e).',
-      'Bon → bonne (on double la consonne finale avant d\'ajouter -e).',
-    ],
-
-    // ── ADJECTIVE POSITION ───────────────────────────────────────────────────
-    [
-      'adjective-position-a1',
-      'multiple-choice',
-      'A friend recommends a restaurant. Choose the most natural sentence.',
-      'Un ami recommande un restaurant. Choisissez la phrase la plus naturelle.',
-      [
-        'C\'est un bon restaurant.',
-        'C\'est un restaurant bon.',
-        'C\'est bon un restaurant.',
-        'C\'est restaurant bon un.',
-      ],
-      'C\'est un bon restaurant.',
-      'Bon is one of the short frequent adjectives that comes before the noun.',
-      'Bon est l\'un des adjectifs courts fréquents qui se place avant le nom.',
-    ],
-    [
-      'adjective-position-a1',
-      'multiple-choice',
-      'Which adjective normally comes BEFORE the noun?',
-      'Quel adjectif se place normalement AVANT le nom ?',
-      ['rouge', 'français', 'vieux', 'médical'],
-      'vieux',
-      'Vieux is a BAGS adjective (Beauty, Age, Goodness, Size) and typically precedes the noun.',
-      'Vieux est un adjectif BAGS (Beauté, Âge, Bonté, Taille) et précède généralement le nom.',
-    ],
-
-    // ── SUBJECT PRONOUNS ─────────────────────────────────────────────────────
-    [
-      'subject-pronouns-a1',
-      'multiple-choice',
-      'In spoken French, what pronoun do people often use instead of "nous"?',
-      'En français oral, quel pronom utilise-t-on souvent à la place de « nous » ?',
-      ['vous', 'ils', 'on', 'elles'],
-      'on',
-      'On is very common in spoken French to replace nous (we).',
-      'On est très courant en français oral pour remplacer nous (we).',
-    ],
-    [
-      'subject-pronouns-a1',
-      'fill',
-      'Complete: ___ mangeons ensemble ce soir. (we)',
-      'Complétez : ___ mangeons ensemble ce soir. (nous)',
-      undefined,
-      'Nous',
-      'Nous (or on) is used for "we".',
-      'Nous (ou on) s\'utilise pour « we ».',
-    ],
-    [
-      'subject-pronouns-a1',
-      'multiple-choice',
-      'Which pronoun refers to a group of men and women together?',
-      'Quel pronom désigne un groupe d\'hommes et de femmes ensemble ?',
-      ['elles', 'ils', 'eux', 'on'],
-      'ils',
-      'A mixed-gender group uses ils in French.',
-      'Un groupe mixte utilise ils en français.',
-    ],
-
-    // ── TU VS VOUS ───────────────────────────────────────────────────────────
-    [
-      'tu-vous-a1',
-      'multiple-choice',
-      'You meet your boss for the first time. Which form do you use?',
-      'Vous rencontrez votre patron pour la première fois. Quelle forme utilisez-vous ?',
-      ['Tu', 'Vous', 'On', 'Ils'],
-      'Vous',
-      'Vous is the polite / formal form used with strangers, bosses, and people older than you.',
-      'Vous est la forme polie / formelle utilisée avec les inconnus, les supérieurs et les personnes plus âgées.',
-    ],
-    [
-      'tu-vous-a1',
-      'multiple-choice',
-      'A French child speaks to you at the playground. Which form would they naturally use?',
-      'Un enfant français vous parle dans un parc. Quelle forme utiliserait-il naturellement ?',
-      ['vous', 'tu', 'ils', 'on'],
-      'tu',
-      'Children typically use tu with adults they just met in informal contexts.',
-      'Les enfants utilisent généralement tu avec les adultes qu\'ils viennent de rencontrer dans des contextes informels.',
-    ],
-
-    // ── ÊTRE AND AVOIR ───────────────────────────────────────────────────────
-    [
-      'etre-avoir',
-      'multiple-choice',
-      'Choose the correct form: Mon frère ___ trente ans.',
-      'Choisissez la bonne forme : Mon frère ___ trente ans.',
-      ['est', 'a', 'sont', 'ont'],
-      'a',
-      'Age in French uses avoir: il a trente ans.',
-      'L\'âge en français s\'exprime avec avoir : il a trente ans.',
-    ],
-    [
-      'etre-avoir',
-      'fill',
-      'Complete: Nous ___ faim après la randonnée. (avoir)',
-      'Complétez : Nous ___ faim après la randonnée. (avoir)',
-      undefined,
-      'avons',
-      'Hunger uses avoir: nous avons faim.',
-      'La faim s\'exprime avec avoir : nous avons faim.',
-    ],
-    [
-      'etre-avoir',
-      'multiple-choice',
-      'Which sentence is correct for "It is cold" (weather)?',
-      'Quelle phrase est correcte pour « il fait froid » (météo) ?',
-      ['Il est froid.', 'Il a froid.', 'Il fait froid.', 'Il froid.'],
-      'Il fait froid.',
-      'Weather expressions use faire: il fait froid/chaud/beau.',
-      'Les expressions météorologiques utilisent faire : il fait froid/chaud/beau.',
-    ],
-    [
-      'etre-avoir',
-      'multiple-choice',
-      'You feel sick. Which sentence do you say?',
-      'Vous êtes malade. Quelle phrase dites-vous ?',
-      ['Je suis mal.', 'J\'ai mal.', 'Je fait mal.', 'J\'ai maladie.'],
-      'J\'ai mal.',
-      'Avoir mal means to be in pain / to feel sick.',
-      'Avoir mal signifie avoir de la douleur.',
-    ],
-
-    // ── PRESENT -ER VERBS ────────────────────────────────────────────────────
-    [
-      'present-er',
-      'multiple-choice',
-      'At the market, a vendor calls out: "Regardez ___ tomates fraîches !" What does he then say to you?',
-      'Au marché, un vendeur crie : « Regardez ces tomates fraîches ! » Que vous dit-il ensuite ?',
-      ['Tu cherche quoi ?', 'Vous cherchez quoi ?', 'Vous chercheZ quoi ?', 'Vous cherchons quoi ?'],
-      'Vous cherchez quoi ?',
-      'Vous + -er verbs: drop -er and add -ez. Chercher → cherchez.',
-      'Avec vous + verbes en -er : supprimer -er et ajouter -ez. Chercher → cherchez.',
-    ],
-    [
-      'present-er',
-      'fill',
-      'Complete the blog post: "Chaque matin, je ___ mon café lentement." (savourer)',
-      'Complétez le billet de blog : « Chaque matin, je ___ mon café lentement. » (savourer)',
-      undefined,
-      'savoure',
-      'Je + savourer: drop -er → savoure.',
-      'Je + savourer : supprimer -er → savoure.',
-    ],
-    [
-      'present-er',
-      'multiple-choice',
-      'Choose the correct conjugation: Ils ___ le week-end à la campagne. (passer)',
-      'Choisissez la bonne conjugaison : Ils ___ le week-end à la campagne. (passer)',
-      ['passons', 'passez', 'passent', 'passe'],
-      'passent',
-      'Ils + -er verbs take -ent (usually silent): ils passent.',
-      'Ils + verbes en -er prennent -ent (souvent muet) : ils passent.',
-    ],
-    [
-      'present-er',
-      'fill',
-      'Complete: Nous ___ nos amis ce soir. (inviter)',
-      'Complétez : Nous ___ nos amis ce soir. (inviter)',
-      undefined,
-      'invitons',
-      'Nous + -er verbs: add -ons. Inviter → invitons.',
-      'Nous + verbes en -er : ajouter -ons. Inviter → invitons.',
-    ],
-
-    // ── ALLER AND FAIRE ──────────────────────────────────────────────────────
-    [
-      'present-aller-faire-a1',
-      'multiple-choice',
-      'Your friend asks how you are. What is the most natural reply?',
-      'Votre ami demande comment vous allez. Quelle est la réponse la plus naturelle ?',
-      ['Je fais bien, merci.', 'Je vais bien, merci.', 'Je suis bien, merci.', 'J\'ai bien, merci.'],
-      'Je vais bien, merci.',
-      'Aller is used in greetings: comment ça va ? Je vais bien.',
-      'Aller s\'utilise dans les salutations : comment ça va ? Je vais bien.',
-    ],
-    [
-      'present-aller-faire-a1',
-      'fill',
-      'Complete: Qu\'est-ce que vous ___ ce week-end ? (faire)',
-      'Complétez : Qu\'est-ce que vous ___ ce week-end ? (faire)',
-      undefined,
-      'faites',
-      'Vous + faire = faites.',
-      'Vous + faire = faites.',
-    ],
-    [
-      'present-aller-faire-a1',
-      'multiple-choice',
-      'Which phrase uses "faire" for an activity?',
-      'Quelle phrase utilise « faire » pour une activité ?',
-      [
-        'Il va au foot.',
-        'Il joue au foot.',
-        'Il fait du foot.',
-        'Il est au foot.',
-      ],
-      'Il fait du foot.',
-      'Faire + du/de la + activity is a common pattern: faire du foot.',
-      'Faire + du/de la + activité est un modèle courant : faire du foot.',
-    ],
-
-    // ── NEGATION NE…PAS ──────────────────────────────────────────────────────
-    [
-      'negation-ne-pas-a1',
-      'multiple-choice',
-      'Your friend asks if you drink coffee. You don\'t. Choose the correct answer.',
-      'Votre ami demande si vous buvez du café. Vous n\'en buvez pas. Choisissez la bonne réponse.',
-      ['Je bois pas du café.', 'Je ne bois pas de café.', 'Je ne bois pas du café.', 'Je pas bois du café.'],
-      'Je ne bois pas de café.',
-      'After a negation, du/de la/des become de/d\'.',
-      'Après la négation, du/de la/des deviennent de/d\'.',
-    ],
-    [
-      'negation-ne-pas-a1',
-      'fill',
-      'Make negative: Elle comprend l\'anglais. → Elle ___ ___ l\'anglais.',
-      'Mettez à la forme négative : Elle comprend l\'anglais. → Elle ___ ___ l\'anglais.',
-      undefined,
-      'ne comprend pas',
-      'Ne goes before the verb, pas goes after: elle ne comprend pas.',
-      'Ne se place avant le verbe, pas après : elle ne comprend pas.',
-    ],
-    [
-      'negation-ne-pas-a1',
-      'multiple-choice',
-      'In spoken French, which part of the negation is often dropped?',
-      'En français oral, quelle partie de la négation est souvent supprimée ?',
-      ['pas', 'ne', 'le verbe', 'le sujet'],
-      'ne',
-      'In casual speech, ne is often omitted: "Je sais pas" instead of "Je ne sais pas".',
-      'Dans la langue familière, ne est souvent omis : « Je sais pas » au lieu de « Je ne sais pas ».',
-    ],
-
-    // ── QUESTIONS ────────────────────────────────────────────────────────────
-    [
-      'questions',
-      'multiple-choice',
-      'A tourist asks politely for directions. Which question is most formal?',
-      'Un touriste demande poliment son chemin. Quelle question est la plus formelle ?',
-      [
-        'La gare est où ?',
-        'Où est-ce que la gare est ?',
-        'Où est la gare ?',
-        'La gare c\'est où ?',
-      ],
-      'Où est la gare ?',
-      'Inversion (Où est la gare ?) is the most formal style.',
-      'L\'inversion (Où est la gare ?) est le style le plus formel.',
-    ],
-    [
-      'questions',
-      'fill',
-      'Transform to a question using est-ce que: Tu aimes le cinéma. → ___',
-      'Transformez en question avec est-ce que : Tu aimes le cinéma. → ___',
-      undefined,
-      'Est-ce que tu aimes le cinéma ?',
-      'Est-ce que comes before the normal subject-verb order.',
-      'Est-ce que se place avant l\'ordre normal sujet-verbe.',
-    ],
-    [
-      'questions',
-      'multiple-choice',
-      'Which question word asks "how many/much"?',
-      'Quel mot interrogatif demande « combien » ?',
-      ['Comment', 'Pourquoi', 'Combien', 'Lequel'],
-      'Combien',
-      'Combien means how many or how much.',
-      'Combien signifie how many ou how much.',
-    ],
-    [
-      'questions',
-      'multiple-choice',
-      'Which sentence correctly uses inversion to ask a question?',
-      'Quelle phrase utilise correctement l\'inversion pour poser une question ?',
-      [
-        'Tu parle-t-il français ?',
-        'Parlez-vous français ?',
-        'Est parlez-vous français ?',
-        'Vous parlez français ?',
-      ],
-      'Parlez-vous français ?',
-      'Inversion places the verb before the subject pronoun: parlez-vous.',
-      'L\'inversion place le verbe avant le pronom sujet : parlez-vous.',
-    ],
-
-    // ── C'EST VS IL EST ───────────────────────────────────────────────────────
-    [
-      'c-est-il-est-a1',
-      'multiple-choice',
-      'You are introducing your sister to a friend. Which sentence do you use?',
-      'Vous présentez votre sœur à un ami. Quelle phrase utilisez-vous ?',
-      ['Elle est ma sœur.', 'C\'est ma sœur.', 'Il est ma sœur.', 'C\'est une ma sœur.'],
-      'C\'est ma sœur.',
-      'C\'est is used to identify or introduce a person: c\'est ma sœur.',
-      'C\'est sert à identifier ou présenter une personne : c\'est ma sœur.',
-    ],
-    [
-      'c-est-il-est-a1',
-      'multiple-choice',
-      'How do you describe someone\'s job in French? (He is a teacher)',
-      'Comment décrit-on le métier de quelqu\'un en français ? (Il est professeur)',
-      ['C\'est professeur.', 'Il est un professeur.', 'Il est professeur.', 'C\'est il professeur.'],
-      'Il est professeur.',
-      'With professions after il/elle est, no article is used: il est professeur.',
-      'Avec les professions après il/elle est, on n\'utilise pas d\'article : il est professeur.',
-    ],
-
-    // ── POSSESSIVE ADJECTIVES ────────────────────────────────────────────────
-    [
-      'possessive-adjectives-a1',
-      'multiple-choice',
-      'Your colleague says: "J\'ai oublié ___ portable !" (her phone – she is female)',
-      'Votre collègue dit : « J\'ai oublié ___ portable ! » (son téléphone – elle est une femme)',
-      ['ma', 'sa', 'son', 'ses'],
-      'son',
-      'Portable begins with a vowel, so use son (even for a feminine owner).',
-      'Portable commence par une voyelle, donc on utilise son (même pour un propriétaire féminin).',
-    ],
-    [
-      'possessive-adjectives-a1',
-      'fill',
-      'Complete: Nous avons oublié ___ parapluies chez toi. (nos)',
-      'Complétez : Nous avons oublié ___ parapluies chez toi. (nos)',
-      undefined,
-      'nos',
-      'Nos is the plural possessive adjective for nous.',
-      'Nos est l\'adjectif possessif pluriel de nous.',
-    ],
-    [
-      'possessive-adjectives-a1',
-      'multiple-choice',
-      'A French friend asks: "C\'est ___ idée de faire une fête ?" (your idea – informal)',
-      'Un ami français demande : « C\'est ___ idée de faire une fête ? » (ta ou votre idée)',
-      ['ma', 'ta', 'sa', 'leur'],
-      'ta',
-      'Informal "your" + feminine noun idée = ta.',
-      '« Your » informel + nom féminin idée = ta.',
-    ],
-
-    // ── DEMONSTRATIVE ADJECTIVES ─────────────────────────────────────────────
-    [
-      'demonstrative-adjectives-a1',
-      'multiple-choice',
-      'You point to a dress in a shop window: "___ robe est magnifique !"',
-      'Vous montrez une robe dans une vitrine : « ___ robe est magnifique ! »',
-      ['Ce', 'Cet', 'Cette', 'Ces'],
-      'Cette',
-      'Robe is feminine singular: cette robe.',
-      'Robe est féminin singulier : cette robe.',
-    ],
-    [
-      'demonstrative-adjectives-a1',
-      'fill',
-      'Complete: ___ été, je vais en vacances au Portugal. (this summer)',
-      'Complétez : ___ été, je vais en vacances au Portugal. (cet été)',
-      undefined,
-      'Cet',
-      'Été begins with a vowel sound, so cet is used (masculine singular).',
-      'Été commence par un son voyelle, donc on utilise cet (masculin singulier).',
-    ],
-    [
-      'demonstrative-adjectives-a1',
-      'multiple-choice',
-      'Which form is used before a masculine singular noun starting with a consonant?',
-      'Quelle forme utilise-t-on avant un nom masculin singulier commençant par une consonne ?',
-      ['cette', 'cet', 'ces', 'ce'],
-      'ce',
-      'Ce is used before a masculine singular noun starting with a consonant: ce livre.',
-      'Ce s\'utilise avant un nom masculin singulier qui commence par une consonne : ce livre.',
-    ],
-
-    // ── NUMBERS, TIME, DATES ─────────────────────────────────────────────────
-    [
-      'numbers-time-a1',
-      'multiple-choice',
-      'Your flight is at 14:30. How do you say this in French?',
-      'Votre vol est à 14 h 30. Comment le dites-vous en français ?',
-      [
-        'Il est deux heures et demie de l\'après-midi.',
-        'Il est quatorze heures trente.',
-        'Il est deux heures trente.',
-        'Il est le quatorze heure trente.',
-      ],
-      'Il est quatorze heures trente.',
-      'In formal / 24-hour contexts, French uses quatorze heures trente.',
-      'Dans les contextes formels / 24 h, le français utilise quatorze heures trente.',
-    ],
-    [
-      'numbers-time-a1',
-      'fill',
-      'Write in French: The meeting is on the 15th of March. → La réunion est ___ mars.',
-      'Écrivez en français : La réunion est le 15 mars. → La réunion est ___ mars.',
-      undefined,
-      'le 15',
-      'Dates in French use le + number + month: le 15 mars.',
-      'Les dates en français utilisent le + nombre + mois : le 15 mars.',
-    ],
-    [
-      'numbers-time-a1',
-      'multiple-choice',
-      'How do you ask someone\'s age in French?',
-      'Comment demande-t-on l\'âge de quelqu\'un en français ?',
-      [
-        'Tu es combien d\'années ?',
-        'Tu as quel âge ?',
-        'Tu es quel âge ?',
-        'Tu fais quel âge ?',
-      ],
-      'Tu as quel âge ?',
-      'Age in French uses avoir: tu as quel âge ? / quel âge as-tu ?',
-      'L\'âge en français utilise avoir : tu as quel âge ? / quel âge as-tu ?',
-    ],
-
-    // ── PREPOSITIONS OF PLACE ────────────────────────────────────────────────
-    [
-      'prepositions-place-a1',
-      'multiple-choice',
-      'The keys are not on the table. They are ___ the sofa.',
-      'Les clés ne sont pas sur la table. Elles sont ___ le canapé.',
-      ['sur', 'dans', 'sous', 'devant'],
-      'sous',
-      'Sous means under / beneath: les clés sont sous le canapé.',
-      'Sous signifie under / beneath : les clés sont sous le canapé.',
-    ],
-    [
-      'prepositions-place-a1',
-      'fill',
-      'Complete the directions: La pharmacie est ___ côté de la boulangerie.',
-      'Complétez les indications : La pharmacie est ___ côté de la boulangerie.',
-      undefined,
-      'à',
-      'À côté de means next to.',
-      'À côté de signifie next to.',
-    ],
-    [
-      'prepositions-place-a1',
-      'multiple-choice',
-      'Where is the ATM? Choose the correct preposition.',
-      'Où est le distributeur de billets ? Choisissez la bonne préposition.',
-      [
-        'Il est au face de la banque.',
-        'Il est en face de la banque.',
-        'Il est face de la banque.',
-        'Il est devant de la banque.',
-      ],
-      'Il est en face de la banque.',
-      'En face de means opposite / across from.',
-      'En face de signifie opposite / across from.',
-    ],
-
-    // ── IL Y A ───────────────────────────────────────────────────────────────
-    [
-      'il-y-a-a1',
-      'multiple-choice',
-      'How do you say "There is no more milk" in French?',
-      'Comment dit-on « Il n\'y a plus de lait » en français ?',
-      [
-        'Il n\'y a pas de lait.',
-        'Il n\'y a plus de lait.',
-        'Il y a plus du lait.',
-        'Il n\'y est plus de lait.',
-      ],
-      'Il n\'y a plus de lait.',
-      'Il n\'y a plus de = there is no more / no longer any.',
-      'Il n\'y a plus de = there is no more / no longer any.',
-    ],
-    [
-      'il-y-a-a1',
-      'fill',
-      'Complete: ___ un problème avec la connexion internet.',
-      'Complétez : ___ un problème avec la connexion internet.',
-      undefined,
-      'Il y a',
-      'Il y a introduces the existence of something.',
-      'Il y a indique l\'existence de quelque chose.',
-    ],
-
-    // ── FUTUR PROCHE ─────────────────────────────────────────────────────────
-    [
-      'futur-proche-a1',
-      'multiple-choice',
-      'Your train leaves in two minutes! Which sentence expresses this urgency?',
-      'Votre train part dans deux minutes ! Quelle phrase exprime cette urgence ?',
-      [
-        'Le train part dans deux minutes.',
-        'Le train va partir dans deux minutes.',
-        'Le train partait dans deux minutes.',
-        'Le train partirait dans deux minutes.',
-      ],
-      'Le train va partir dans deux minutes.',
-      'Futur proche (aller + infinitive) is especially natural for imminent events.',
-      'Le futur proche (aller + infinitif) est particulièrement naturel pour les événements imminents.',
-    ],
-    [
-      'futur-proche-a1',
-      'fill',
-      'Complete: Ils ___ visiter Paris la semaine prochaine. (aller)',
-      'Complétez : Ils ___ visiter Paris la semaine prochaine. (aller)',
-      undefined,
-      'vont',
-      'Ils + aller = vont: ils vont visiter.',
-      'Ils + aller = vont : ils vont visiter.',
-    ],
-    [
-      'futur-proche-a1',
-      'multiple-choice',
-      'Make the futur proche negative: Je vais sortir. → ___',
-      'Mettez le futur proche à la forme négative : Je vais sortir. → ___',
-      [
-        'Je vais ne pas sortir.',
-        'Je ne vais pas sortir.',
-        'Je ne pas vais sortir.',
-        'Je vais pas ne sortir.',
-      ],
-      'Je ne vais pas sortir.',
-      'In futur proche, ne…pas surrounds aller: je ne vais pas sortir.',
-      'Au futur proche, ne…pas entoure aller : je ne vais pas sortir.',
-    ],
-
-    // ── IMPERATIVE ───────────────────────────────────────────────────────────
-    [
-      'imperative-a1',
-      'multiple-choice',
-      'A recipe says: "___ la farine avec les œufs." (mélanger – vous form)',
-      'Une recette dit : « ___ la farine avec les œufs. » (mélanger – forme vous)',
-      ['Mélangez', 'Mélange', 'Mélangeons', 'Mélanges'],
-      'Mélangez',
-      'Vous imperative of mélanger: mélangez.',
-      'L\'impératif vous de mélanger : mélangez.',
-    ],
-    [
-      'imperative-a1',
-      'fill',
-      'Complete the command (tu): ___ la porte, s\'il te plaît ! (fermer)',
-      'Complétez l\'ordre (tu) : ___ la porte, s\'il te plaît ! (fermer)',
-      undefined,
-      'Ferme',
-      'Tu imperative of -er verbs drops final -s: ferme.',
-      'L\'impératif tu des verbes en -er perd le -s final : ferme.',
-    ],
-    [
-      'imperative-a1',
-      'multiple-choice',
-      'How do you say "Let\'s go to the cinema!" in French?',
-      'Comment dit-on « Allons au cinéma ! » en français ?',
-      ['Allez au cinéma !', 'Allons au cinéma !', 'Va au cinéma !', 'Vais au cinéma !'],
-      'Allons au cinéma !',
-      'The nous imperative of aller is allons.',
-      'L\'impératif nous de aller est allons.',
-    ],
-
-    // ── PARTITIVE ARTICLES ───────────────────────────────────────────────────
-    [
-      'partitive-articles-a2',
-      'multiple-choice',
-      'You order in a French restaurant: "Je voudrais ___ poulet et ___ eau, s\'il vous plaît."',
-      'Vous commandez dans un restaurant : « Je voudrais ___ poulet et ___ eau, s\'il vous plaît. »',
-      ['le / l\'', 'du / de l\'', 'un / une', 'du / une'],
-      'du / de l\'',
-      'Partitive articles express an unspecified portion: du poulet, de l\'eau.',
-      'Les articles partitifs expriment une quantité non précisée : du poulet, de l\'eau.',
-    ],
-    [
-      'partitive-articles-a2',
-      'fill',
-      'Complete: Tu veux ___ soupe ? Non, merci, je ne veux pas ___ soupe. (de la / de)',
-      'Complétez : Tu veux ___ soupe ? Non, merci, je ne veux pas ___ soupe.',
-      undefined,
-      'de la / de',
-      'De la in positive sentences; de after negation.',
-      'De la dans les phrases positives ; de après la négation.',
-    ],
-    [
-      'partitive-articles-a2',
-      'multiple-choice',
-      'Which sentence correctly uses a partitive article?',
-      'Quelle phrase utilise correctement un article partitif ?',
-      [
-        'Je fais de la musique.',
-        'Je fais la musique.',
-        'Je fais une musique.',
-        'Je fais des la musique.',
-      ],
-      'Je fais de la musique.',
-      'Faire de la musique: partitive de la is standard here.',
-      'Faire de la musique : l\'article partitif de la est standard ici.',
-    ],
-
-    // ── QUANTITIES WITH DE ───────────────────────────────────────────────────
-    [
-      'quantities-a2',
-      'multiple-choice',
-      'Choose the correct sentence: "I have a lot of friends."',
-      'Choisissez la bonne phrase : « J\'ai beaucoup d\'amis. »',
-      [
-        'J\'ai beaucoup des amis.',
-        'J\'ai beaucoup d\'amis.',
-        'J\'ai beaucoup de des amis.',
-        'J\'ai beaucoup les amis.',
-      ],
-      'J\'ai beaucoup d\'amis.',
-      'Beaucoup de (d\' before a vowel) is followed directly by the noun.',
-      'Beaucoup de (d\' devant une voyelle) est suivi directement du nom.',
-    ],
-    [
-      'quantities-a2',
-      'fill',
-      'Complete: Elle boit ___ trop ___ café. (beaucoup / de)',
-      'Complétez : Elle boit ___ trop ___ café.',
-      undefined,
-      'trop de',
-      'Trop de means too much of.',
-      'Trop de signifie too much of.',
-    ],
-
-    // ── REFLEXIVE VERBS ──────────────────────────────────────────────────────
-    [
-      'reflexive-verbs-a2',
-      'multiple-choice',
-      'Describe a morning routine: "Chaque matin, elle ___ à sept heures."',
-      'Décrivez une routine matinale : « Chaque matin, elle ___ à sept heures. » (se lever)',
-      ['se lève', 'se lever', 'se levé', 'se lèves'],
-      'se lève',
-      'Elle se lève: the reflexive pronoun se agrees with elle, verb takes -e.',
-      'Elle se lève : le pronom réfléchi se s\'accorde avec elle, le verbe prend -e.',
-    ],
-    [
-      'reflexive-verbs-a2',
-      'fill',
-      'Complete the negation: Je ne ___ pas avant minuit. (se coucher)',
-      'Complétez la négation : Je ne ___ pas avant minuit. (se coucher)',
-      undefined,
-      'me couche',
-      'The reflexive pronoun stays before the verb: je ne me couche pas.',
-      'Le pronom réfléchi reste avant le verbe : je ne me couche pas.',
-    ],
-    [
-      'reflexive-verbs-a2',
-      'multiple-choice',
-      'Which sentence correctly uses a reflexive verb in the passé composé?',
-      'Quelle phrase utilise correctement un verbe pronominal au passé composé ?',
-      [
-        'Elle a levé à sept heures.',
-        'Elle s\'est levée à sept heures.',
-        'Elle était levée à sept heures.',
-        'Elle s\'a levée à sept heures.',
-      ],
-      'Elle s\'est levée à sept heures.',
-      'Reflexive verbs use être in the passé composé; the participle agrees with the subject.',
-      'Les verbes pronominaux utilisent être au passé composé ; le participe s\'accorde avec le sujet.',
-    ],
-
-    // ── PASSÉ COMPOSÉ (AVOIR) ────────────────────────────────────────────────
-    [
-      'passe-compose-avoir-a2',
-      'multiple-choice',
-      'Tell a story about yesterday: "Hier soir, nous ___ un excellent repas au restaurant." (manger)',
-      'Racontez une histoire sur hier : « Hier soir, nous ___ un excellent repas au restaurant. » (manger)',
-      ['mangions', 'avons mangé', 'mangeons', 'mangerons'],
-      'avons mangé',
-      'A completed past event uses the passé composé: nous avons mangé.',
-      'Un événement passé terminé utilise le passé composé : nous avons mangé.',
-    ],
-    [
-      'passe-compose-avoir-a2',
-      'fill',
-      'Complete: Tu ___ tes clés dans le taxi. (oublier)',
-      'Complétez : Tu ___ tes clés dans le taxi. (oublier)',
-      undefined,
-      'as oublié',
-      'Tu + avoir (as) + past participle oublié.',
-      'Tu + avoir (as) + participe passé oublié.',
-    ],
-    [
-      'passe-compose-avoir-a2',
-      'multiple-choice',
-      'What is the past participle of "voir" (to see)?',
-      'Quel est le participe passé de « voir » ?',
-      ['voit', 'voyé', 'vu', 'voir'],
-      'vu',
-      'The irregular past participle of voir is vu.',
-      'Le participe passé irrégulier de voir est vu.',
-    ],
-    [
-      'passe-compose-avoir-a2',
-      'fill',
-      'Complete: Vous ___ ce film la semaine dernière ? (voir)',
-      'Complétez : Vous ___ ce film la semaine dernière ? (voir)',
-      undefined,
-      'avez vu',
-      'Vous + avoir (avez) + vu.',
-      'Vous + avoir (avez) + vu.',
-    ],
-
-    // ── PASSÉ COMPOSÉ (ÊTRE) ─────────────────────────────────────────────────
-    [
-      'passe-compose-etre-a2',
-      'multiple-choice',
-      'Which verb takes ÊTRE as its auxiliary in the passé composé?',
-      'Quel verbe utilise ÊTRE comme auxiliaire au passé composé ?',
-      ['manger', 'voir', 'vendre', 'partir'],
-      'partir',
-      'Partir is one of the DR & MRS VANDERTRAMP verbs that use être.',
-      'Partir est l\'un des verbes DR & MRS VANDERTRAMP qui utilisent être.',
-    ],
-    [
-      'passe-compose-etre-a2',
-      'fill',
-      'Complete: Les enfants ___ dans le jardin ce matin. (sortir)',
-      'Complétez : Les enfants ___ dans le jardin ce matin. (sortir)',
-      undefined,
-      'sont sortis',
-      'Sortir uses être; les enfants (masculine plural) → sortis.',
-      'Sortir utilise être ; les enfants (masculin pluriel) → sortis.',
-    ],
-    [
-      'passe-compose-etre-a2',
-      'multiple-choice',
-      'Choose the correct passé composé sentence with agreement.',
-      'Choisissez la phrase correcte au passé composé avec accord.',
-      [
-        'Mes sœurs sont parti ce matin.',
-        'Mes sœurs sont partis ce matin.',
-        'Mes sœurs sont parties ce matin.',
-        'Mes sœurs ont parties ce matin.',
-      ],
-      'Mes sœurs sont parties ce matin.',
-      'Sœurs is feminine plural; with être, the participle must agree: parties.',
-      'Sœurs est féminin pluriel ; avec être, le participe doit s\'accorder : parties.',
-    ],
-
-    // ── IMPARFAIT ────────────────────────────────────────────────────────────
-    [
-      'imparfait',
-      'multiple-choice',
-      'Describe a childhood memory: "Quand j\'étais enfant, je ___ des bandes dessinées tous les soirs."',
-      'Décrivez un souvenir d\'enfance : « Quand j\'étais enfant, je ___ des bandes dessinées tous les soirs. »',
-      ['lisais', 'ai lu', 'lirais', 'lis'],
-      'lisais',
-      'Repeated past habits use imparfait: je lisais.',
-      'Les habitudes passées répétées utilisent l\'imparfait : je lisais.',
-    ],
-    [
-      'imparfait',
-      'fill',
-      'Complete: Il ___ très chaud cet été-là. (faire)',
-      'Complétez : Il ___ très chaud cet été-là. (faire)',
-      undefined,
-      'faisait',
-      'Weather descriptions in the past use imparfait: il faisait.',
-      'Les descriptions météorologiques au passé utilisent l\'imparfait : il faisait.',
-    ],
-    [
-      'imparfait',
-      'multiple-choice',
-      'Choose imparfait to complete: Quand il était jeune, il ___ du piano.',
-      'Choisissez l\'imparfait : Quand il était jeune, il ___ du piano.',
-      ['joue', 'jouait', 'a joué', 'jouera'],
-      'jouait',
-      'Childhood habits use imparfait: il jouait.',
-      'Les habitudes d\'enfance utilisent l\'imparfait : il jouait.',
-    ],
-
-    // ── PC VS IMPARFAIT ──────────────────────────────────────────────────────
-    [
-      'pc-imparfait-a2',
-      'multiple-choice',
-      'Choose the correct tenses: "Je ___ (lire) quand le téléphone ___." (sonner)',
-      'Choisissez les bons temps : « Je ___ (lire) quand le téléphone ___ (sonner). »',
-      [
-        'lisais / a sonné',
-        'ai lu / sonnait',
-        'lisais / sonnait',
-        'ai lu / a sonné',
-      ],
-      'lisais / a sonné',
-      'Background action (lire) = imparfait; interrupting completed event (sonner) = passé composé.',
-      'L\'action de fond (lire) = imparfait ; l\'événement interrupteur terminé (sonner) = passé composé.',
-    ],
-    [
-      'pc-imparfait-a2',
-      'multiple-choice',
-      'Which sentence correctly mixes both tenses?',
-      'Quelle phrase mélange correctement les deux temps ?',
-      [
-        'Il pleuvait et j\'ai décidé de rester.',
-        'Il a plu et j\'ai décidé de rester.',
-        'Il pleuvait et je décidais de rester.',
-        'Il plu et j\'ai décidé de rester.',
-      ],
-      'Il pleuvait et j\'ai décidé de rester.',
-      'The background (rain) is imparfait; the decision is a completed event (passé composé).',
-      'Le fond (pluie) est à l\'imparfait ; la décision est un événement terminé (passé composé).',
-    ],
-    [
-      'pc-imparfait-a2',
-      'fill',
-      'Complete: Hier, j\'___ (avoir) faim alors j\'___ (manger) une pizza.',
-      'Complétez : Hier, j\'___ (avoir) faim alors j\'___ (manger) une pizza.',
-      undefined,
-      'avais / ai mangé',
-      'State of hunger = imparfait (avais); the eating action = passé composé (ai mangé).',
-      'L\'état de faim = imparfait (avais) ; l\'action de manger = passé composé (ai mangé).',
-    ],
-
-    // ── OBJECT PRONOUNS ──────────────────────────────────────────────────────
-    [
-      'object-pronouns',
-      'multiple-choice',
-      'Replace "la lettre": Tu lis la lettre. → ___',
-      'Remplacez « la lettre » : Tu lis la lettre. → ___',
-      ['Tu lui lis.', 'Tu la lis.', 'Tu le lis.', 'Tu en lis.'],
-      'Tu la lis.',
-      'Lettre is feminine; the direct object pronoun is la.',
-      'Lettre est féminin ; le pronom COD est la.',
-    ],
-    [
-      'object-pronouns',
-      'multiple-choice',
-      'Replace "à mes parents": Je téléphone à mes parents. → ___',
-      'Remplacez « à mes parents » : Je téléphone à mes parents. → ___',
-      ['Je les téléphone.', 'Je leur téléphone.', 'Je leur téléphones.', 'Je lui téléphone.'],
-      'Je leur téléphone.',
-      'Téléphoner à someone → indirect object pronoun leur (plural).',
-      'Téléphoner à quelqu\'un → pronom COI leur (pluriel).',
-    ],
-    [
-      'object-pronouns',
-      'fill',
-      'Complete: Est-ce que tu aimes ce film ? Oui, je ___ aime beaucoup. (le)',
-      'Complétez : Est-ce que tu aimes ce film ? Oui, je ___ aime beaucoup.',
-      undefined,
-      'l\'',
-      'Le becomes l\' before aime (vowel): je l\'aime.',
-      'Le devient l\' devant aime (voyelle) : je l\'aime.',
-    ],
-
-    // ── PRONOUN PLACEMENT ────────────────────────────────────────────────────
-    [
-      'pronoun-placement-a2',
-      'multiple-choice',
-      'Replace "les devoirs": Il veut faire les devoirs. → ___',
-      'Remplacez « les devoirs » : Il veut faire les devoirs. → ___',
-      [
-        'Il les veut faire.',
-        'Il veut les faire.',
-        'Il les faire veut.',
-        'Il faire les veut.',
-      ],
-      'Il veut les faire.',
-      'With two verbs, the object pronoun goes before the infinitive it belongs to.',
-      'Avec deux verbes, le pronom COD se place avant l\'infinitif auquel il appartient.',
-    ],
-    [
-      'pronoun-placement-a2',
-      'fill',
-      'Complete negation: Je ne ___ vois pas. (le / before vowel)',
-      'Complétez la négation : Je ne ___ vois pas.',
-      undefined,
-      'le',
-      'Le goes between ne and the verb: je ne le vois pas.',
-      'Le se place entre ne et le verbe : je ne le vois pas.',
-    ],
-
-    // ── Y AND EN ─────────────────────────────────────────────────────────────
-    [
-      'y-en-intro-a2',
-      'multiple-choice',
-      'Replace "à Paris": Tu vas à Paris ? → ___',
-      'Remplacez « à Paris » : Tu vas à Paris ? → ___',
-      ['Tu y vas ?', 'Tu en vas ?', 'Tu lui vas ?', 'Tu le vas ?'],
-      'Tu y vas ?',
-      'Y replaces à + place: tu y vas.',
-      'Y remplace à + lieu : tu y vas.',
-    ],
-    [
-      'y-en-intro-a2',
-      'fill',
-      'Replace "du café": Tu veux du café ? → Tu ___ veux ?',
-      'Remplacez « du café » : Tu veux du café ? → Tu ___ veux ?',
-      undefined,
-      'en',
-      'En replaces du/de la/des + noun or quantity.',
-      'En remplace du/de la/des + nom ou quantité.',
-    ],
-    [
-      'y-en-intro-a2',
-      'multiple-choice',
-      'Complete the answer: "Tu penses à ton examen ?" → "Oui, j\'___ pense tout le temps."',
-      'Complétez : « Tu penses à ton examen ? » → « Oui, j\'___ pense tout le temps. »',
-      ['en', 'y', 'lui', 'le'],
-      'y',
-      'Penser à + thing → replace with y.',
-      'Penser à + chose → remplacer par y.',
-    ],
-
-    // ── COMPARATIVE ──────────────────────────────────────────────────────────
-    [
-      'comparative-a2',
-      'multiple-choice',
-      'Compare two cities: "Lyon est ___ grande que Paris."',
-      'Comparez deux villes : « Lyon est ___ grande que Paris. »',
-      ['plus', 'aussi', 'moins', 'autant'],
-      'moins',
-      'Lyon is smaller than Paris, so use moins... que.',
-      'Lyon est plus petite que Paris, donc on utilise moins... que.',
-    ],
-    [
-      'comparative-a2',
-      'fill',
-      'Complete: Ce restaurant est ___ bon ___ l\'autre. (as good as)',
-      'Complétez : Ce restaurant est ___ bon ___ l\'autre. (aussi bon que)',
-      undefined,
-      'aussi / que',
-      'Aussi...que expresses equality: aussi bon que.',
-      'Aussi...que exprime l\'égalité : aussi bon que.',
-    ],
-    [
-      'comparative-a2',
-      'multiple-choice',
-      'What is the irregular comparative of "bon" (good)?',
-      'Quel est le comparatif irrégulier de « bon » ?',
-      ['plus bon', 'meilleur', 'mieux', 'bon plus'],
-      'meilleur',
-      'Bon has the irregular comparative meilleur (better).',
-      'Bon a le comparatif irrégulier meilleur (better).',
-    ],
-
-    // ── SUPERLATIVE ──────────────────────────────────────────────────────────
-    [
-      'superlative-a2',
-      'multiple-choice',
-      'Choose the correct superlative: "C\'est le restaurant ___ cher de la ville."',
-      'Choisissez le bon superlatif : « C\'est le restaurant ___ cher de la ville. »',
-      ['le plus', 'plus', 'le moins', 'moins'],
-      'le plus',
-      'Le plus + adjective = the most.',
-      'Le plus + adjectif = the most.',
-    ],
-    [
-      'superlative-a2',
-      'fill',
-      'Complete: C\'est ___ film que j\'ai jamais vu ! (the worst – masculine)',
-      'Complétez : C\'est ___ film que j\'ai jamais vu ! (le pire)',
-      undefined,
-      'le pire',
-      'Le pire is the irregular superlative of mauvais (the worst).',
-      'Le pire est le superlatif irrégulier de mauvais (the worst).',
-    ],
-
-    // ── ADVERBS ──────────────────────────────────────────────────────────────
-    [
-      'adverbs-a2',
-      'multiple-choice',
-      'Form the adverb from "rapide" (quick).',
-      'Formez l\'adverbe de « rapide » (rapide).',
-      ['rapidément', 'rapidment', 'rapidement', 'rapide'],
-      'rapidement',
-      'Most adverbs are formed from the feminine adjective + -ment: rapide → rapidement.',
-      'La plupart des adverbes se forment à partir de l\'adjectif féminin + -ment : rapide → rapidement.',
-    ],
-    [
-      'adverbs-a2',
-      'fill',
-      'Complete: Il parle ___ vite qu\'elle. (as fast as)',
-      'Complétez : Il parle ___ vite qu\'elle. (aussi vite que)',
-      undefined,
-      'aussi',
-      'Aussi...que expresses equality with adverbs: aussi vite que.',
-      'Aussi...que exprime l\'égalité avec les adverbes : aussi vite que.',
-    ],
-
-    // ── TIME EXPRESSIONS ─────────────────────────────────────────────────────
-    [
-      'time-expressions-a2',
-      'multiple-choice',
-      '"I have been learning French for two years." Which expression fits?',
-      '« J\'apprends le français ___ deux ans. » Quelle expression convient ?',
-      ['pendant', 'depuis', 'il y a', 'dans'],
-      'depuis',
-      'Depuis marks duration that continues to the present.',
-      'Depuis marque une durée qui continue jusqu\'au présent.',
-    ],
-    [
-      'time-expressions-a2',
-      'multiple-choice',
-      '"I studied for three hours." Which expression fits?',
-      '« J\'ai étudié ___ trois heures. » Quelle expression convient ?',
-      ['depuis', 'il y a', 'pendant', 'dans'],
-      'pendant',
-      'Pendant expresses a completed duration.',
-      'Pendant exprime une durée terminée.',
-    ],
-    [
-      'time-expressions-a2',
-      'fill',
-      'Complete: Je l\'ai rencontré ___ six mois. (six months ago)',
-      'Complétez : Je l\'ai rencontré ___ six mois. (il y a six mois)',
-      undefined,
-      'il y a',
-      'Il y a + duration tells how long ago something happened.',
-      'Il y a + durée indique depuis combien de temps quelque chose s\'est passé.',
-    ],
-
-    // ── FUTURE SIMPLE ────────────────────────────────────────────────────────
-    [
-      'future-simple-intro-a2',
-      'multiple-choice',
-      'A weather forecast says it will rain tomorrow. Choose the correct sentence.',
-      'La météo annonce de la pluie demain. Choisissez la bonne phrase.',
-      [
-        'Il pleut demain.',
-        'Il va pleuvoir demain.',
-        'Il pleuvra demain.',
-        'Il pleuvait demain.',
-      ],
-      'Il pleuvra demain.',
-      'The futur simple (pleuvra) is standard for forecasts.',
-      'Le futur simple (pleuvra) est standard pour les prévisions.',
-    ],
-    [
-      'future-simple-intro-a2',
-      'fill',
-      'Complete: Nous ___ à la réunion à neuf heures. (être)',
-      'Complétez : Nous ___ à la réunion à neuf heures. (être)',
-      undefined,
-      'serons',
-      'Être uses the irregular future stem ser-: nous serons.',
-      'Être utilise le radical irrégulier ser- : nous serons.',
-    ],
-
-    // ── CONDITIONAL POLITENESS ───────────────────────────────────────────────
-    [
-      'conditional-politeness-a2',
-      'multiple-choice',
-      'You call a hotel to book a room. Which phrase is most polite?',
-      'Vous appelez un hôtel pour réserver une chambre. Quelle phrase est la plus polie ?',
-      [
-        'Je veux une chambre pour deux nuits.',
-        'Donnez-moi une chambre.',
-        'Je voudrais réserver une chambre pour deux nuits.',
-        'Tu me donnes une chambre ?',
-      ],
-      'Je voudrais réserver une chambre pour deux nuits.',
-      'Je voudrais is the polite conditional form used in requests.',
-      'Je voudrais est la forme conditionnelle polie utilisée dans les demandes.',
-    ],
-    [
-      'conditional-politeness-a2',
-      'fill',
-      'Complete the polite question: ___ -vous m\'aider, s\'il vous plaît ? (pouvoir)',
-      'Complétez la question polie : ___ -vous m\'aider, s\'il vous plaît ? (pourriez)',
-      undefined,
-      'Pourriez',
-      'Pourriez-vous is the polite conditional for could you.',
-      'Pourriez-vous est la forme conditionnelle polie pour could you.',
-    ],
-
-    // ── RELATIVE PRONOUNS (A2 level qui/que/où) ──────────────────────────────
-    [
-      'relative-qui-que-ou-a2',
-      'multiple-choice',
-      'Connect the two ideas: "J\'ai un ami. Il parle six langues." → J\'ai un ami ___.',
-      'Reliez les deux idées : « J\'ai un ami. Il parle six langues. » → J\'ai un ami ___.',
-      ['que parle six langues.', 'qui parle six langues.', 'où parle six langues.', 'dont parle six langues.'],
-      'qui parle six langues.',
-      'Qui is the subject of the relative clause: un ami qui parle...',
-      'Qui est le sujet de la proposition relative : un ami qui parle...',
-    ],
-    [
-      'relative-qui-que-ou-a2',
-      'fill',
-      'Complete: Le café ___ tu aimes est fermé le lundi.',
-      'Complétez : Le café ___ tu aimes est fermé le lundi.',
-      undefined,
-      'que',
-      'Que is the direct object of aimes in the relative clause.',
-      'Que est le COD de aimes dans la proposition relative.',
-    ],
-    [
-      'relative-qui-que-ou-a2',
-      'multiple-choice',
-      'Choose: "The city ___ I was born is beautiful."',
-      'Choisissez : « La ville ___ je suis né est magnifique. »',
-      ['que', 'qui', 'dont', 'où'],
-      'où',
-      'Où refers to a place or time.',
-      'Où renvoie à un lieu ou à un moment.',
-    ],
-
-    // ── NEGATION VARIED ──────────────────────────────────────────────────────
-    [
-      'negation-varied-a2',
-      'multiple-choice',
-      '"I no longer drink coffee." Which sentence is correct?',
-      '« Je ne bois plus de café. » Quelle phrase est correcte ?',
-      [
-        'Je ne bois jamais de café.',
-        'Je ne bois plus de café.',
-        'Je ne bois rien de café.',
-        'Je ne bois personne de café.',
-      ],
-      'Je ne bois plus de café.',
-      'Ne...plus means no longer / no more.',
-      'Ne...plus signifie no longer / no more.',
-    ],
-    [
-      'negation-varied-a2',
-      'fill',
-      'Complete: Il ne mange ___ de viande. (nothing but / only)',
-      'Complétez : Il ne mange ___ de viande. (ne...que)',
-      undefined,
-      'que',
-      'Ne...que means only / nothing but.',
-      'Ne...que signifie only / nothing but.',
-    ],
-    [
-      'negation-varied-a2',
-      'multiple-choice',
-      'Transform to negative: Quelqu\'un a appelé. → ___',
-      'Transformez à la forme négative : Quelqu\'un a appelé. → ___',
-      [
-        'Quelqu\'un n\'a pas appelé.',
-        'Personne n\'a appelé.',
-        'Rien n\'a appelé.',
-        'Jamais quelqu\'un a appelé.',
-      ],
-      'Personne n\'a appelé.',
-      'Quelqu\'un (someone) becomes personne (nobody) in the negative.',
-      'Quelqu\'un (someone) devient personne (nobody) à la forme négative.',
-    ],
-
-    // ── SI CLAUSES (PRESENT + FUTURE) ────────────────────────────────────────
-    [
-      'si-present-future-a2',
-      'multiple-choice',
-      '"If it rains, I will stay home." Which is correct?',
-      '« Si il pleut, je resterai à la maison. » Quelle phrase est correcte ?',
-      [
-        'Si il pleuvra, je resterai.',
-        'Si il pleut, je resterai.',
-        'Si il pleuvrait, je resterai.',
-        'Si il pleurait, je resterai.',
-      ],
-      'Si il pleut, je resterai.',
-      'Real conditions: si + present, then future (or imperative).',
-      'Conditions réelles : si + présent, puis futur (ou impératif).',
-    ],
-    [
-      'si-present-future-a2',
-      'fill',
-      'Complete: Si tu ___ fatigué, va dormir ! (être)',
-      'Complétez : Si tu ___ fatigué, va dormir ! (être)',
-      undefined,
-      'es',
-      'The si clause uses present tense: si tu es.',
-      'La proposition avec si utilise le présent : si tu es.',
-    ],
-
-    // ── REPORTED SPEECH (A2) ─────────────────────────────────────────────────
-    [
-      'reported-speech-a2',
-      'multiple-choice',
-      'Report what Marie said: Marie: "Je suis malade." → Marie dit ___.',
-      'Rapportez ce que Marie a dit : Marie : « Je suis malade. » → Marie dit ___.',
-      [
-        'qu\'elle est malade.',
-        'qu\'elle était malade.',
-        'elle est malade.',
-        'que je suis malade.',
-      ],
-      'qu\'elle est malade.',
-      'Dire que reports speech; the subject changes from je to elle.',
-      'Dire que rapporte un discours ; le sujet change de je à elle.',
-    ],
-
-    // ── PAST PARTICIPLE AGREEMENT ────────────────────────────────────────────
-    [
-      'past-participle-agreement-a2',
-      'multiple-choice',
-      'Choose: "Les filles ___ parties de bonne heure."',
-      'Choisissez : « Les filles ___ parties de bonne heure. »',
-      ['ont', 'est', 'sont', 'avez'],
-      'sont',
-      'Partir uses être; les filles is subject → sont parties.',
-      'Partir utilise être ; les filles est le sujet → sont parties.',
-    ],
-    [
-      'past-participle-agreement-a2',
-      'fill',
-      'Agree the participle: Les résultats ont été ___ hier. (publier)',
-      'Accordez le participe : Les résultats ont été ___ hier. (publier)',
-      undefined,
-      'publiés',
-      'Résultats is masculine plural; publiés agrees with it after été.',
-      'Résultats est masculin pluriel ; publiés s\'accorde avec lui après été.',
-    ],
-
-    // ── STRESSED PRONOUNS ────────────────────────────────────────────────────
-    [
-      'pronoms-toniques-a2',
-      'multiple-choice',
-      'Emphasize the subject: "Je suis d\'accord, ___."',
-      'Insistez sur le sujet : « Je suis d\'accord, ___ ! »',
-      ['me', 'moi', 'je', 'mon'],
-      'moi',
-      'Moi is the stressed pronoun used for emphasis.',
-      'Moi est le pronom tonique utilisé pour l\'insistance.',
-    ],
-    [
-      'pronoms-toniques-a2',
-      'fill',
-      'Complete: Ce cadeau est pour ___ (them – masculine plural).',
-      'Complétez : Ce cadeau est pour ___ (eux).',
-      undefined,
-      'eux',
-      'Eux is the stressed pronoun after a preposition for masculine plural.',
-      'Eux est le pronom tonique après une préposition pour le masculin pluriel.',
-    ],
-
-    // ── OBLIGATION EXPRESSIONS ────────────────────────────────────────────────
-    [
-      'obligation-expressions-a2',
-      'multiple-choice',
-      'Your boss says everyone must attend the meeting. Which sentence does he use?',
-      'Votre patron dit que tout le monde doit assister à la réunion. Quelle phrase utilise-t-il ?',
-      [
-        'Tout le monde veut assister.',
-        'Il faut assister à la réunion.',
-        'On peut assister à la réunion.',
-        'Tout le monde aime assister.',
-      ],
-      'Il faut assister à la réunion.',
-      'Il faut + infinitive is the standard impersonal obligation.',
-      'Il faut + infinitif est l\'obligation impersonnelle standard.',
-    ],
-    [
-      'obligation-expressions-a2',
-      'fill',
-      'Complete: Tu ___ réserver à l\'avance. (devoir)',
-      'Complétez : Tu ___ réserver à l\'avance. (devoir)',
-      undefined,
-      'dois',
-      'Devoir expresses personal obligation: tu dois.',
-      'Devoir exprime l\'obligation personnelle : tu dois.',
-    ],
-
-    // ── PASSÉ RÉCENT ─────────────────────────────────────────────────────────
-    [
-      'passe-recent-a2',
-      'multiple-choice',
-      '"The bus just left." Which sentence is correct?',
-      '« Le bus vient de partir. » Quelle phrase est correcte ?',
-      [
-        'Le bus est parti vient.',
-        'Le bus vient de partir.',
-        'Le bus venait de partir.',
-        'Le bus va partir.',
-      ],
-      'Le bus vient de partir.',
-      'Venir de + infinitive = just did (passé récent).',
-      'Venir de + infinitif = vient de faire (passé récent).',
-    ],
-
-    // ── GÉRONDIF ─────────────────────────────────────────────────────────────
-    [
-      'gerondif-intro-a2',
-      'multiple-choice',
-      'Express "while listening to music": ___ de la musique, je révise.',
-      'Exprimez « en écoutant de la musique » : ___ de la musique, je révise.',
-      ['En écoutant', 'À écouter', 'De écouter', 'Pour écouter'],
-      'En écoutant',
-      'The gérondif uses en + present participle (écoutant).',
-      'Le gérondif utilise en + participe présent (écoutant).',
-    ],
-    [
-      'gerondif-intro-a2',
-      'fill',
-      'Complete: Il a appris le français ___ des séries françaises. (en regardant)',
-      'Complétez : Il a appris le français ___ des séries françaises.',
-      undefined,
-      'en regardant',
-      'En + present participle: en regardant.',
-      'En + participe présent : en regardant.',
-    ],
-
-    // ── B1: PLUS-QUE-PARFAIT ─────────────────────────────────────────────────
-    [
-      'plus-que-parfait-b1',
-      'multiple-choice',
-      '"By the time I arrived, they had already eaten." Choose the correct plus-que-parfait.',
-      '« Quand je suis arrivé, ils ___ déjà ___. » (manger)',
-      ['avaient déjà mangé', 'ont déjà mangé', 'avaient déjà manger', 'ont déjà manger'],
-      'avaient déjà mangé',
-      'Plus-que-parfait: imparfait of avoir/être + past participle.',
-      'Plus-que-parfait : imparfait de avoir/être + participe passé.',
-    ],
-    [
-      'plus-que-parfait-b1',
-      'fill',
-      'Complete: Si seulement j\'___ étudié plus ! (avoir)',
-      'Complétez : Si seulement j\'___ étudié plus ! (avoir)',
-      undefined,
-      'avais',
-      'Plus-que-parfait with avoir: j\'avais étudié.',
-      'Plus-que-parfait avec avoir : j\'avais étudié.',
-    ],
-
-    // ── B1: PASSIVE VOICE ────────────────────────────────────────────────────
-    [
-      'passive-voice-b1',
-      'multiple-choice',
-      'Transform to passive: "On a réparé la voiture." → ___',
-      'Transformez à la voix passive : « On a réparé la voiture. » → ___',
-      [
-        'La voiture a été réparée.',
-        'La voiture est réparée.',
-        'La voiture a réparé.',
-        'La voiture été réparée.',
-      ],
-      'La voiture a été réparée.',
-      'Passive in passé composé: a été + past participle (agreeing with subject).',
-      'Passif au passé composé : a été + participe passé (accordé avec le sujet).',
-    ],
-    [
-      'passive-voice-b1',
-      'fill',
-      'Complete: Le rapport sera ___ demain matin. (rédiger)',
-      'Complétez : Le rapport sera ___ demain matin. (rédiger)',
-      undefined,
-      'rédigé',
-      'Passive future: sera + past participle rédigé.',
-      'Passif futur : sera + participe passé rédigé.',
-    ],
-
-    // ── B1: SUBJUNCTIVE ──────────────────────────────────────────────────────
-    [
-      'subjunctive-basic-b1',
-      'multiple-choice',
-      '"I am glad that you are here." Which is correct?',
-      '« Je suis content que tu ___ là. » (être)',
-      ['es', 'soit', 'sois', 'étais'],
-      'sois',
-      'Emotion + que triggers the subjunctive: tu sois.',
-      'Une émotion + que déclenche le subjonctif : tu sois.',
-    ],
-    [
-      'subjunctive-basic-b1',
-      'fill',
-      'Complete: Il faut que vous ___ patient. (être)',
-      'Complétez : Il faut que vous ___ patient. (être)',
-      undefined,
-      'soyez',
-      'Vous subjunctive of être is soyez.',
-      'Le subjonctif de être avec vous est soyez.',
-    ],
-    [
-      'subjunctive-basic-b1',
-      'multiple-choice',
-      'Which expression does NOT trigger the subjunctive?',
-      'Quelle expression ne déclenche PAS le subjonctif ?',
-      ['il est possible que', 'je doute que', 'je suis sûr que', 'il est dommage que'],
-      'je suis sûr que',
-      'Certainty (je suis sûr que) uses the indicative, not the subjunctive.',
-      'La certitude (je suis sûr que) utilise l\'indicatif, pas le subjonctif.',
-    ],
-
-    // ── B1: SI + IMPARFAIT / CONDITIONAL ────────────────────────────────────
-    [
-      'si-imparfait-conditional-b1',
-      'multiple-choice',
-      '"If I had a car, I would visit my grandparents more often." Which is correct?',
-      '« Si j\'___ une voiture, je ___ mes grands-parents plus souvent. »',
-      [
-        'ai / visiterais',
-        'avais / visiterais',
-        'aurais / visiterais',
-        'avais / visiterai',
-      ],
-      'avais / visiterais',
-      'Si + imparfait (avais) → conditional (visiterais) for unreal present.',
-      'Si + imparfait (avais) → conditionnel (visiterais) pour un irréel présent.',
-    ],
-    [
-      'si-imparfait-conditional-b1',
-      'fill',
-      'Complete: Si tu savais la vérité, tu ___ surpris. (être)',
-      'Complétez : Si tu savais la vérité, tu ___ surpris. (être)',
-      undefined,
-      'serais',
-      'Conditional of être with tu: tu serais.',
-      'Le conditionnel de être avec tu : tu serais.',
-    ],
-
-    // ── B1: CONNECTORS ────────────────────────────────────────────────────────
-    [
-      'connectors-cause-consequence-b1',
-      'multiple-choice',
-      'Choose the correct connector: "I stayed home ___ it was raining."',
-      'Choisissez le bon connecteur : « Je suis resté chez moi ___ il pleuvait. »',
-      ['donc', 'cependant', 'parce que', 'pourtant'],
-      'parce que',
-      'Parce que introduces a cause / reason.',
-      'Parce que introduit une cause / raison.',
-    ],
-    [
-      'connectors-cause-consequence-b1',
-      'fill',
-      'Complete: Il est cher, ___ il est de bonne qualité. (however)',
-      'Complétez : Il est cher, ___ il est de bonne qualité. (cependant)',
-      undefined,
-      'cependant',
-      'Cependant means however / nevertheless.',
-      'Cependant signifie however / nevertheless.',
-    ],
-    [
-      'connectors-cause-consequence-b1',
-      'multiple-choice',
-      'Which connector introduces a consequence?',
-      'Quel connecteur introduit une conséquence ?',
-      ['parce que', 'car', 'donc', 'bien que'],
-      'donc',
-      'Donc means therefore / so, introducing a consequence.',
-      'Donc signifie therefore / so, introduisant une conséquence.',
-    ],
-
-    // ── B1: PAST CONDITIONAL ─────────────────────────────────────────────────
-    [
-      'conditionnel-passe-b1',
-      'multiple-choice',
-      '"You should have called me!" Which sentence expresses this regret?',
-      '« Tu aurais dû m\'appeler ! » Quelle phrase exprime ce reproche ?',
-      [
-        'Tu devais m\'appeler.',
-        'Tu aurais dû m\'appeler.',
-        'Tu devrais m\'appeler.',
-        'Tu avais dû m\'appeler.',
-      ],
-      'Tu aurais dû m\'appeler.',
-      'Aurais dû (past conditional of devoir) expresses a reproach about the past.',
-      'Aurais dû (conditionnel passé de devoir) exprime un reproche sur le passé.',
-    ],
-    [
-      'conditionnel-passe-b1',
-      'fill',
-      'Complete: Nous ___ partir plus tôt. (pouvoir – regret)',
-      'Complétez : Nous ___ partir plus tôt. (pouvoir – regret)',
-      undefined,
-      'aurions pu',
-      'Aurions pu is the past conditional of pouvoir (we could have).',
-      'Aurions pu est le conditionnel passé de pouvoir (we could have).',
-    ],
-
-    // ── B1: ADVANCED NEGATION ────────────────────────────────────────────────
-    [
-      'advanced-negation-b1',
-      'multiple-choice',
-      '"Neither Paul nor Sophie came." Which is correct?',
-      '« Ni Paul ni Sophie ___ venu(e). » Quelle phrase est correcte ?',
-      [
-        'Ni Paul ni Sophie est venu.',
-        'Ni Paul ni Sophie ne sont venus.',
-        'Paul ni Sophie n\'est venu.',
-        'Ni Paul ni Sophie ne venait.',
-      ],
-      'Ni Paul ni Sophie ne sont venus.',
-      'Ni...ni pairs with ne; the verb agrees with the two subjects.',
-      'Ni...ni s\'utilise avec ne ; le verbe s\'accorde avec les deux sujets.',
-    ],
-    [
-      'advanced-negation-b1',
-      'fill',
-      'Complete: Je n\'ai ___ envie de sortir ce soir. (not at all)',
-      'Complétez : Je n\'ai ___ envie de sortir ce soir. (aucune)',
-      undefined,
-      'aucune',
-      'Aucun(e) means not a single / no, and agrees with the noun (envie is feminine).',
-      'Aucun(e) signifie not a single / no, et s\'accorde avec le nom (envie est féminin).',
-    ],
-
-    // ── B1: REPORTED SPEECH IN THE PAST ──────────────────────────────────────
-    [
-      'reported-speech-past-b1',
-      'multiple-choice',
-      'Report what he said: "Je suis fatigué." → Il a dit ___.',
-      'Rapportez : « Je suis fatigué. » → Il a dit ___',
-      [
-        'qu\'il est fatigué.',
-        'qu\'il était fatigué.',
-        'qu\'il soit fatigué.',
-        'qu\'il serait fatigué.',
-      ],
-      'qu\'il était fatigué.',
-      'When the reporting verb is in the past, the present tense shifts to imparfait.',
-      'Quand le verbe introducteur est au passé, le présent devient imparfait.',
-    ],
-    [
-      'reported-speech-past-b1',
-      'fill',
-      'Complete: Elle a expliqué qu\'elle ___ son billet. (perdre – past reported)',
-      'Complétez : Elle a expliqué qu\'elle ___ son billet. (perdre)',
-      undefined,
-      'avait perdu',
-      'Reported speech shifts passé composé to plus-que-parfait: avait perdu.',
-      'Le discours rapporté transforme le passé composé en plus-que-parfait : avait perdu.',
-    ],
-
-    // ── B1: DOUBLE PRONOUNS ──────────────────────────────────────────────────
-    [
-      'double-pronouns-b1',
-      'multiple-choice',
-      'Replace "le livre à mon ami": Tu donnes le livre à mon ami. → ___',
-      'Remplacez « le livre à mon ami » : Tu donnes le livre à mon ami. → ___',
-      [
-        'Tu lui le donnes.',
-        'Tu le lui donnes.',
-        'Tu les lui donnes.',
-        'Tu y le donnes.',
-      ],
-      'Tu le lui donnes.',
-      'Direct object (le) comes before indirect object (lui).',
-      'Le COD (le) se place avant le COI (lui).',
-    ],
-    [
-      'double-pronouns-b1',
-      'fill',
-      'Complete: Des nouvelles ? Elle nous ___ donnera demain. (en)',
-      'Complétez : Des nouvelles ? Elle nous ___ donnera demain.',
-      undefined,
-      'en',
-      'Nous comes before en: elle nous en donnera.',
-      'Nous se place avant en : elle nous en donnera.',
-    ],
-
-    // ── B1: FUTUR ANTÉRIEUR ───────────────────────────────────────────────────
-    [
-      'futur-anterieur-b1',
-      'multiple-choice',
-      '"When you arrive, I will have already cooked." Choose the futur antérieur.',
-      '« Quand tu arriveras, j\'___ déjà ___. » (cuisiner)',
-      ['aurai déjà cuisiné', 'aurais déjà cuisiné', 'ai déjà cuisiné', 'avais déjà cuisiné'],
-      'aurai déjà cuisiné',
-      'Futur antérieur: future of avoir/être + past participle.',
-      'Futur antérieur : futur de avoir/être + participe passé.',
-    ],
-    [
-      'futur-anterieur-b1',
-      'fill',
-      'Complete: Dès qu\'elle ___ (finir), nous partirons.',
-      'Complétez : Dès qu\'elle ___ (finir), nous partirons.',
-      undefined,
-      'aura fini',
-      'After dès que with a future clause, use futur antérieur: aura fini.',
-      'Après dès que avec une proposition future, on utilise le futur antérieur : aura fini.',
-    ],
-
-    // ── B1: DONT, CE QUI, CE QUE ──────────────────────────────────────────────
-    [
-      'dont-ce-qui-ce-que-b1',
-      'multiple-choice',
-      '"What I like is travelling." Choose the correct form.',
-      '« ___ j\'aime, c\'est voyager. »',
-      ['Que', 'Ce que', 'Ce qui', 'Qui'],
-      'Ce que',
-      'Ce que is the direct object of j\'aime.',
-      'Ce que est le COD de j\'aime.',
-    ],
-    [
-      'dont-ce-qui-ce-que-b1',
-      'fill',
-      'Complete: C\'est un film ___ tout le monde parle.',
-      'Complétez : C\'est un film ___ tout le monde parle.',
-      undefined,
-      'dont',
-      'Parler de → dont in the relative clause.',
-      'Parler de → dont dans la proposition relative.',
-    ],
-
-    // ── B1: CONCESSION ────────────────────────────────────────────────────────
-    [
-      'concession-b1',
-      'multiple-choice',
-      '"Although it is expensive, I bought it." Which is correct?',
-      '« ___ c\'est cher, je l\'ai acheté. »',
-      [
-        'Même si c\'était cher,',
-        'Bien que c\'est cher,',
-        'Bien qu\'il soit cher,',
-        'Malgré c\'est cher,',
-      ],
-      'Bien qu\'il soit cher,',
-      'Bien que + subjunctive: bien qu\'il soit cher.',
-      'Bien que + subjonctif : bien qu\'il soit cher.',
-    ],
-    [
-      'concession-b1',
-      'fill',
-      'Complete: ___ ses efforts, il n\'a pas réussi. (malgré)',
-      'Complétez : ___ ses efforts, il n\'a pas réussi.',
-      undefined,
-      'Malgré',
-      'Malgré + noun (no verb) expresses despite.',
-      'Malgré + nom (sans verbe) exprime despite.',
-    ],
-
-    // ── B2: SUBJUNCTIVE ──────────────────────────────────────────────────────
-    [
-      'subjunctive',
-      'multiple-choice',
-      '"I want you to come." Which sentence uses the subjunctive correctly?',
-      '« Je veux que tu ___ » (venir)',
-      ['viens', 'viennes', 'viendrais', 'es venu'],
-      'viennes',
-      'After vouloir que, use the subjunctive: tu viennes.',
-      'Après vouloir que, on utilise le subjonctif : tu viennes.',
-    ],
-    [
-      'subjunctive',
-      'fill',
-      'Complete: Bien qu\'il ___ malade, il est venu. (être)',
-      'Complétez : Bien qu\'il ___ malade, il est venu. (être)',
-      undefined,
-      'soit',
-      'Bien que triggers the subjunctive: il soit.',
-      'Bien que déclenche le subjonctif : il soit.',
-    ],
-    [
-      'subjunctive',
-      'multiple-choice',
-      'Which verb is in the subjunctive?',
-      'Quel verbe est au subjonctif ?',
-      ['je vais', 'tu fasses', 'nous avons', 'ils mangent'],
-      'tu fasses',
-      'Fasses is the subjunctive of faire with tu.',
-      'Fasses est le subjonctif de faire avec tu.',
-    ],
-
-    // ── B2: SI CLAUSES (full range) ──────────────────────────────────────────
-    [
-      'si-clauses',
-      'multiple-choice',
-      '"If he had studied more, he would have passed." Choose the correct form.',
-      '« S\'il ___ plus, il ___ l\'examen. »',
-      [
-        'avait étudié / aurait réussi',
-        'étudiait / réussirait',
-        'a étudié / aura réussi',
-        'étudie / réussira',
-      ],
-      'avait étudié / aurait réussi',
-      'Unreal past condition: si + plus-que-parfait → past conditional.',
-      'Condition irréelle passée : si + plus-que-parfait → conditionnel passé.',
-    ],
-    [
-      'si-clauses',
-      'fill',
-      'Complete: Si nous ___ su, nous aurions réagi autrement. (savoir)',
-      'Complétez : Si nous ___ su, nous aurions réagi autrement. (savoir)',
-      undefined,
-      'avions',
-      'Si + plus-que-parfait: si nous avions su.',
-      'Si + plus-que-parfait : si nous avions su.',
-    ],
-    [
-      'si-clauses',
-      'multiple-choice',
-      'Which sentence uses the correct tense sequence for a real future condition?',
-      'Quelle phrase utilise la bonne séquence de temps pour une condition future réelle ?',
-      [
-        'Si tu viendrais, on irait au cinéma.',
-        'Si tu viens, on ira au cinéma.',
-        'Si tu venais, on ira au cinéma.',
-        'Si tu viens, on allait au cinéma.',
-      ],
-      'Si tu viens, on ira au cinéma.',
-      'Real future condition: si + present → future.',
-      'Condition future réelle : si + présent → futur.',
-    ],
-
-    // ── B1: NOMINALIZATION ───────────────────────────────────────────────────
-    [
-      'nominalization-b1',
-      'multiple-choice',
-      'What is the noun derived from "développer" (to develop)?',
-      'Quel est le nom dérivé de « développer » ?',
-      ['le développeur', 'la développation', 'le développement', 'la développure'],
-      'le développement',
-      'The most common pattern: -er → -ement (développement).',
-      'Le modèle le plus courant : -er → -ement (développement).',
-    ],
-    [
-      'nominalization-b1',
-      'fill',
-      'Nominalize: décider → la ___',
-      'Nominalisez : décider → la ___',
-      undefined,
-      'décision',
-      'Décider → la décision (-tion pattern).',
-      'Décider → la décision (modèle -tion).',
-    ],
-
-    // ── B1: OPINION / ARGUMENT ───────────────────────────────────────────────
-    [
-      'opinion-argument-b1',
-      'multiple-choice',
-      'Which phrase introduces a personal opinion in French?',
-      'Quelle phrase introduit une opinion personnelle en français ?',
-      ['Il est vrai que', 'À mon avis,', 'Il faut que', 'Il semble que'],
-      'À mon avis,',
-      'À mon avis means in my opinion and introduces a personal view.',
-      'À mon avis signifie in my opinion et introduit un point de vue personnel.',
-    ],
-    [
-      'opinion-argument-b1',
-      'fill',
-      'Complete: ___ une part, c\'est pratique ; d\'autre part, c\'est coûteux. (D\'une)',
-      'Complétez : ___ une part, c\'est pratique ; d\'autre part, c\'est coûteux.',
-      undefined,
-      'D\'une',
-      'D\'une part... d\'autre part means on one hand... on the other hand.',
-      'D\'une part... d\'autre part signifie on one hand... on the other hand.',
-    ],
-
-    // ── FUTUR SIMPLE IRREGULAR B1 ────────────────────────────────────────────
-    [
-      'futur-simple-irregular-b1',
-      'multiple-choice',
-      '"She will not be able to come." Choose the correct future form of pouvoir.',
-      '« Elle ne ___ pas venir. » Choisissez la forme correcte du futur de pouvoir.',
-      ['peut', 'pourra', 'pouvra', 'pouvait'],
-      'pourra',
-      'Pouvoir → future stem pourr-: elle pourra.',
-      'Pouvoir → radical futur pourr- : elle pourra.',
-    ],
-    [
-      'futur-simple-irregular-b1',
-      'fill',
-      'Complete: Il ___ peut-être un médecin un jour. (vouloir → futur)',
-      'Complétez : Il ___ peut-être un médecin un jour. (vouloir → futur)',
-      undefined,
-      'voudra',
-      'Vouloir → future stem voudr-: il voudra.',
-      'Vouloir → radical futur voudr- : il voudra.',
-    ],
-
-    // ── CAUSE EXPRESSIONS B1 ─────────────────────────────────────────────────
-    [
-      'cause-expressions-b1',
-      'multiple-choice',
-      '"Thanks to the internet, I learned French quickly." Choose the correct expression.',
-      '« ___ internet, j\'ai appris le français rapidement. »',
-      ['À cause d\'', 'Grâce à', 'Car', 'Puisque'],
-      'Grâce à',
-      'Grâce à is used for a positive cause; à cause de for a negative one.',
-      'Grâce à s\'utilise pour une cause positive ; à cause de pour une cause négative.',
-    ],
-    [
-      'cause-expressions-b1',
-      'fill',
-      'Complete: ___ tu insistes, d\'accord, je viens ! (puisque)',
-      'Complétez : ___ tu insistes, d\'accord, je viens !',
-      undefined,
-      'Puisque',
-      'Puisque introduces a known or obvious reason.',
-      'Puisque introduit une raison connue ou évidente.',
-    ],
-  ] satisfies QuestionRow[]
-).map((row, index) => ({
-  id: `eq-${index + 1}`,
-  topicId: row[0],
-  type: row[1],
-  promptEn: row[2],
-  promptFr: row[3],
-  choices: row[4],
-  correctAnswer: row[5],
-  explanationEn: row[6],
-  explanationFr: row[7],
-}))
+const adjectives: Adjective[] = [
+  { m: 'petit', f: 'petite', mp: 'petits', fp: 'petites' }, { m: 'sérieux', f: 'sérieuse', mp: 'sérieux', fp: 'sérieuses' },
+  { m: 'nouveau', f: 'nouvelle', mp: 'nouveaux', fp: 'nouvelles' }, { m: 'beau', f: 'belle', mp: 'beaux', fp: 'belles' },
+  { m: 'actif', f: 'active', mp: 'actifs', fp: 'actives' }, { m: 'heureux', f: 'heureuse', mp: 'heureux', fp: 'heureuses' },
+  { m: 'prêt', f: 'prête', mp: 'prêts', fp: 'prêtes' }, { m: 'intéressant', f: 'intéressante', mp: 'intéressants', fp: 'intéressantes' },
+  { m: 'complet', f: 'complète', mp: 'complets', fp: 'complètes' }, { m: 'ancien', f: 'ancienne', mp: 'anciens', fp: 'anciennes' },
+]
+
+const people: Person[] = [
+  { subject: 'je', index: 0 }, { subject: 'tu', index: 1 }, { subject: 'il', index: 2 },
+  { subject: 'nous', index: 3 }, { subject: 'vous', index: 4 }, { subject: 'elles', index: 5 },
+]
+
+const erVerbs = [
+  ['parler', 'parl', 'français'], ['travailler', 'travaill', 'au laboratoire'], ['regarder', 'regard', 'un documentaire'],
+  ['préparer', 'prépar', 'le dîner'], ['visiter', 'visit', 'le musée'], ['écouter', 'écout', 'la radio'],
+  ['habiter', 'habit', 'à Massy'], ['chercher', 'cherch', 'une solution'], ['étudier', 'étudi', 'la grammaire'],
+  ['aimer', 'aim', 'les voyages'], ['arriver', 'arriv', 'à huit heures'], ['demander', 'demand', 'un renseignement'],
+] as const
+const erEndings = ['e', 'es', 'e', 'ons', 'ez', 'ent']
+
+const contexts = [
+  'At work', 'During a French class', 'While planning a trip', 'In a formal email', 'At a restaurant',
+  'During a phone call', 'At the doctor’s office', 'While talking to a colleague', 'At home', 'At the train station',
+]
+
+function pick<T>(items: readonly T[], index: number): T { return items[((index % items.length) + items.length) % items.length] }
+function rotate<T>(items: readonly T[], index: number): T[] { const clean = [...new Set(items)]; const shift = ((index % clean.length) + clean.length) % clean.length; return [...clean.slice(shift), ...clean.slice(0, shift)] }
+function article(noun: Noun, definite = true) { if (definite) return noun.vowel ? "l'" : noun.gender === 'm' ? 'le' : 'la'; return noun.gender === 'm' ? 'un' : 'une' }
+function joinArticle(value: string, noun: string) { return value.endsWith("'") || value.endsWith('’') ? `${value}${noun}` : `${value} ${noun}` }
+function cap(value: string) { return value.charAt(0).toUpperCase() + value.slice(1) }
+function fourChoices(choices: string[], answer: string) {
+  const clean = [...new Set([answer, ...choices])].filter(Boolean)
+  return clean.slice(0, 4)
+}
+function mc(promptEn: string, promptFr: string, choices: string[], answer: string, explanationEn: string, explanationFr: string, variant = 0): QData {
+  return { type: 'multiple-choice', promptEn, promptFr, choices: rotate(fourChoices(choices, answer), variant), correctAnswer: answer, explanationEn, explanationFr }
+}
+function sentenceChoice(correct: string, wrong: string[], explanationEn: string, explanationFr: string, variant: number, promptEn = 'Choose the grammatically correct sentence.', promptFr = 'Choisissez la phrase grammaticalement correcte.'): QData {
+  return mc(promptEn, promptFr, [correct, ...wrong], correct, explanationEn, explanationFr, variant)
+}
+function addPrefix(data: QData, spec: TopicSpec, variant: number): QData {
+  const prefix = `${pick(contexts, variant)} — `
+  const prefixFr = `${pick(['Au travail', 'Pendant un cours de français', 'En préparant un voyage', 'Dans un e-mail formel', 'Au restaurant', 'Pendant un appel', 'Chez le médecin', 'Avec un collègue', 'À la maison', 'À la gare'], variant)} — `
+  return { ...data, promptEn: `${prefix}${data.promptEn}`, promptFr: `${prefixFr}${data.promptFr}`, explanationEn: `${data.explanationEn} Focus: ${spec.titleEn}.`, explanationFr: `${data.explanationFr} Point ciblé : ${spec.titleFr}.` }
+}
+
+function articlesGender(variant: number): QData {
+  const noun = pick(nouns, variant * 5 + 1); const a = article(noun); const indefinite = article(noun, false); const definitePhrase = joinArticle(a, noun.noun); const indefinitePhrase = joinArticle(indefinite, noun.noun)
+  switch (variant % 6) {
+    case 0: return mc(`Complete: ___ ${noun.noun} est sur la table.`, `Complétez : ___ ${noun.noun} est sur la table.`, ['le', 'la', "l'", 'les'], a, `${cap(noun.noun)} is ${noun.gender === 'm' ? 'masculine' : 'feminine'} singular${noun.vowel ? ' and begins with a vowel sound, so elision is required' : ''}.`, `${cap(noun.noun)} est ${noun.gender === 'm' ? 'masculin' : 'féminin'} singulier${noun.vowel ? ' et commence par une voyelle, donc il faut élider' : ''}.`, variant)
+    case 1: return mc(`Which phrase correctly introduces “${noun.noun}” for the first time?`, `Quel groupe présente correctement « ${noun.noun} » pour la première fois ?`, [indefinitePhrase, `${noun.gender === 'm' ? 'une' : 'un'} ${noun.noun}`, `des ${noun.noun}`, definitePhrase], indefinitePhrase, `A noun introduced for the first time normally takes un or une, according to its gender.`, `Un nom présenté pour la première fois prend normalement un ou une selon son genre.`, variant)
+    case 2: { const feminine = pick(nouns.filter((item) => item.gender === 'f' && !item.vowel), variant); const masculine = pick(nouns.filter((item) => item.gender === 'm' && !item.vowel), variant + 3); return mc('Which noun phrase is feminine singular?', 'Quel groupe nominal est féminin singulier ?', [`la ${feminine.noun}`, `le ${masculine.noun}`, `les ${feminine.plural}`, `un ${masculine.noun}`], `la ${feminine.noun}`, 'The feminine singular definite article is la.', 'L’article défini féminin singulier est la.', variant) }
+    case 3: return sentenceChoice(`Je cherche ${indefinitePhrase}.`, [`Je cherche ${noun.gender === 'm' ? 'une' : 'un'} ${noun.noun}.`, `Je cherche des ${noun.noun}.`, `Je cherche de ${noun.noun}.`], `${indefinite} agrees with the gender of ${noun.noun}.`, `${indefinite} s’accorde avec le genre de ${noun.noun}.`, variant)
+    case 4: { const vowelNoun = pick(nouns.filter((item) => item.vowel), variant); return mc(`Choose the correct definite form for “${vowelNoun.noun}”.`, `Choisissez la forme définie correcte pour « ${vowelNoun.noun} ».`, [`l'${vowelNoun.noun}`, `le ${vowelNoun.noun}`, `la ${vowelNoun.noun}`, `les ${vowelNoun.noun}`], `l'${vowelNoun.noun}`, 'Before a vowel sound, le and la become l’.', 'Devant une voyelle, le et la deviennent l’.', variant) }
+    default: { const correct = `${cap(definitePhrase)} est important${noun.gender === 'f' ? 'e' : ''}.`; return sentenceChoice(correct, [`${cap(joinArticle(noun.gender === 'm' ? 'la' : 'le', noun.noun))} est important${noun.gender === 'f' ? 'e' : ''}.`, `${cap(definitePhrase)} est importants.`, `Les ${noun.noun} est important.`], 'The article and adjective must agree with the noun.', 'L’article et l’adjectif doivent s’accorder avec le nom.', variant) }
+  }
+}
+
+function definiteArticles(variant: number): QData {
+  const noun = pick(nouns, variant * 3); const a = article(noun); const definitePhrase = joinArticle(a, noun.noun)
+  const plural = noun.plural
+  switch (variant % 5) {
+    case 0: return mc(`Complete the general statement: ___ ${plural} coûtent parfois cher.`, `Complétez l’énoncé général : ___ ${plural} coûtent parfois cher.`, ['Les', 'Des', 'De', 'Un'], 'Les', 'A general statement about a plural category uses les.', 'Un énoncé général sur une catégorie au pluriel utilise les.', variant)
+    case 1: return mc(`Complete: J’aime ___ ${noun.noun}.`, `Complétez : J’aime ___ ${noun.noun}.`, [a, article(noun, false), 'du', 'de'], a, 'After aimer, adorer, or préférer, use the definite article for a general preference.', 'Après aimer, adorer ou préférer, on utilise l’article défini pour un goût général.', variant)
+    case 2: return sentenceChoice(`Nous visitons ${definitePhrase} dont tu m’as parlé.`, [`Nous visitons ${joinArticle(article(noun, false), noun.noun)} dont tu m’as parlé.`, `Nous visitons de ${noun.noun} dont tu m’as parlé.`, `Nous visitons les ${noun.noun} dont tu m’as parlé.`], 'The noun is specific because it has already been identified.', 'Le nom est précis parce qu’il a déjà été identifié.', variant)
+    case 3: return mc(`Complete: ___ ${noun.noun} de mon collègue est ${noun.gender === 'm' ? 'nouveau' : 'nouvelle'}.`, `Complétez : ___ ${noun.noun} de mon collègue est ${noun.gender === 'm' ? 'nouveau' : 'nouvelle'}.`, [cap(a), cap(article(noun, false)), 'Des', 'Du'], cap(a), 'The possessive complement makes the noun specific, so use the definite article.', 'Le complément possessif rend le nom précis, donc on utilise l’article défini.', variant)
+    default: return mc('Which sentence expresses a general preference correctly?', 'Quelle phrase exprime correctement un goût général ?', [`Elle adore ${definitePhrase}.`, `Elle adore de ${noun.noun}.`, `Elle adore ${joinArticle(article(noun, false), noun.noun)}.`, `Elle adore du ${noun.noun}.`], `Elle adore ${definitePhrase}.`, 'General likes use le, la, l’, or les.', 'Les goûts généraux prennent le, la, l’ ou les.', variant)
+  }
+}
+
+function indefiniteArticles(variant: number): QData {
+  const noun = pick(nouns.filter((item) => !item.vowel), variant * 7); const ind = article(noun, false)
+  switch (variant % 5) {
+    case 0: return mc(`Complete: Dans la pièce, il y a ___ ${noun.noun}.`, `Complétez : Dans la pièce, il y a ___ ${noun.noun}.`, [ind, article(noun), 'de', 'des'], ind, 'Use un or une to introduce one countable object.', 'On utilise un ou une pour présenter un objet comptable.', variant)
+    case 1: return mc(`Make the sentence negative: J’ai ${ind} ${noun.noun}. → Je n’ai pas ___ ${noun.noun}.`, `Mettez à la négation : J’ai ${ind} ${noun.noun}. → Je n’ai pas ___ ${noun.noun}.`, ['de', ind, article(noun), 'des'], 'de', 'After a negation, un, une, and des usually become de or d’.', 'Après la négation, un, une et des deviennent généralement de ou d’.', variant)
+    case 2: return sentenceChoice(`Elle cherche ${ind} ${noun.noun} pour son projet.`, [`Elle cherche ${article(noun)} ${noun.noun} pour son projet.`, `Elle cherche de ${noun.noun} pour son projet.`, `Elle cherche des ${noun.noun} pour son projet.`], 'The object is mentioned for the first time and is singular.', 'L’objet est mentionné pour la première fois et il est singulier.', variant)
+    case 3: return mc('Choose the correct plural introduction.', 'Choisissez la bonne présentation au pluriel.', [`J’ai acheté des ${noun.plural}.`, `J’ai acheté les ${noun.plural}.`, `J’ai acheté de ${noun.plural}.`, `J’ai acheté un ${noun.plural}.`], `J’ai acheté des ${noun.plural}.`, 'Des introduces an unspecified plural quantity.', 'Des présente une quantité plurielle non précisée.', variant)
+    default: return mc(`Which sentence correctly introduces a new ${noun.noun}?`, `Quelle phrase présente correctement un nouveau ${noun.noun} ?`, [`Voici ${ind} ${noun.noun}.`, `Voici ${article(noun)} ${noun.noun}.`, `Voici de ${noun.noun}.`, `Voici des ${noun.noun}.`], `Voici ${ind} ${noun.noun}.`, 'A new singular countable noun takes un or une.', 'Un nom comptable singulier nouveau prend un ou une.', variant)
+  }
+}
+
+function contractedArticles(variant: number): QData {
+  const rows = [
+    ['aller', 'marché', 'au', 'à le'], ['parler', 'directeur', 'au', 'à le'], ['revenir', 'cinéma', 'du', 'de le'],
+    ['penser', 'vacances', 'aux', 'à les'], ['venir', 'Pays-Bas', 'des', 'de les'], ['jouer', 'football', 'au', 'à le'],
+    ['sortir', 'bureau', 'du', 'de le'], ['répondre', 'questions', 'aux', 'à les'],
+  ] as const
+  const [verb, complement, answer, wrong] = pick(rows, variant)
+  const before = ['au', 'aux'].includes(answer) ? 'à' : 'de'
+  return mc(`Complete: ${cap(verb)} ${before} + ${complement} → ${answer === 'au' || answer === 'du' ? '___' : '___'} ${complement}.`, `Complétez : ${cap(verb)} ${before} + ${complement} → ___ ${complement}.`, [answer, wrong, before, answer === 'au' ? 'du' : answer === 'du' ? 'au' : answer === 'aux' ? 'des' : 'aux'], answer, `${before} + ${answer === 'au' || answer === 'du' ? 'le' : 'les'} contracts to ${answer}.`, `${before} + ${answer === 'au' || answer === 'du' ? 'le' : 'les'} se contracte en ${answer}.`, variant)
+}
+
+function pluralNouns(variant: number): QData {
+  const noun = pick(nouns, variant * 5)
+  const wrongs = [`${noun.noun}x`, `${noun.noun}es`, `${noun.noun}aux`, noun.noun, `${noun.noun}s`]
+  switch (variant % 4) {
+    case 0: return mc(`Choose the plural of “un ${noun.noun}”.`, `Choisissez le pluriel de « un ${noun.noun} ».`, [noun.plural, ...wrongs], noun.plural, `The correct plural is ${noun.plural}.`, `Le pluriel correct est ${noun.plural}.`, variant)
+    case 1: return sentenceChoice(`Il y a plusieurs ${noun.plural} dans la salle.`, [`Il y a plusieurs ${noun.noun} dans la salle.`, `Il y a plusieurs ${noun.noun}x dans la salle.`, `Il y a plusieurs ${noun.noun}es dans la salle.`, `Il y a plusieurs ${noun.noun}s dans la salle.`, `Il y a plusieurs ${noun.noun}aux dans la salle.`], `After plusieurs, use the plural form: ${noun.plural}.`, `Après plusieurs, on utilise le pluriel : ${noun.plural}.`, variant)
+    case 2: return mc(`Complete: un ${noun.noun} → des ___.`, `Complétez : un ${noun.noun} → des ___.`, [noun.plural, ...wrongs], noun.plural, `Plural formation must follow the noun pattern.`, `La formation du pluriel dépend du modèle du nom.`, variant)
+    default: return mc('Which singular–plural pair is correct?', 'Quel couple singulier–pluriel est correct ?', [`un ${noun.noun} → des ${noun.plural}`, `un ${noun.noun} → des ${noun.noun}x`, `un ${noun.noun} → des ${noun.noun}es`, `un ${noun.noun} → des ${noun.noun}`], `un ${noun.noun} → des ${noun.plural}`, 'The plural form must be written correctly.', 'Le pluriel doit être correctement écrit.', variant)
+  }
+}
+
+function adjectiveAgreement(variant: number): QData {
+  const adjective = pick(adjectives, variant * 3); const form = pick(['m', 'f', 'mp', 'fp'] as const, variant)
+  const subject = form === 'm' ? 'Le collègue' : form === 'f' ? 'La collègue' : form === 'mp' ? 'Les collègues' : 'Les étudiantes'
+  const verb = form.endsWith('p') ? 'sont' : 'est'
+  const answer = adjective[form]
+  const extraTrap = `${adjective.m}${form.endsWith('p') ? 'es' : 's'}`
+  return mc(`Complete: ${subject} ${verb} ___ .`, `Complétez : ${subject} ${verb} ___ .`, [answer, adjective.m, adjective.f, adjective.mp, adjective.fp, extraTrap], answer, `The adjective must agree with ${subject.toLowerCase()}: ${answer}.`, `L’adjectif s’accorde avec ${subject.toLowerCase()} : ${answer}.`, variant)
+}
+
+function possessives(variant: number): QData {
+  const rows = [
+    ['Marie', 'voiture', 'f', 'sa'], ['Paul', 'livre', 'm', 'son'], ['nous', 'amis', 'p', 'nos'], ['vous', 'bureau', 'm', 'votre'],
+    ['elles', 'questions', 'p', 'leurs'], ['je', 'adresse', 'vowel', 'mon'], ['tu', 'idée', 'vowel', 'ton'], ['il', 'équipe', 'vowel', 'son'],
+  ] as const
+  const [owner, noun, , answer] = pick(rows, variant)
+  return mc(`Complete: ${owner === 'je' ? 'Je donne' : owner === 'tu' ? 'Tu donnes' : 'Voici'} ___ ${noun}.`, `Complétez : ${owner === 'je' ? 'Je donne' : owner === 'tu' ? 'Tu donnes' : 'Voici'} ___ ${noun}.`, [answer, 'ma', 'mes', 'leur'], answer, `The possessive adjective depends on the possessed noun. Before a feminine vowel sound, use mon/ton/son.`, `L’adjectif possessif dépend du nom possédé. Devant une voyelle féminine, on utilise mon/ton/son.`, variant)
+}
+
+function presentEr(variant: number): QData {
+  const [infinitive, stem, complement] = pick(erVerbs, variant * 5); const person = pick(people, variant * 3); const answer = `${stem}${erEndings[person.index]}`
+  return mc(`Complete in the present tense: ${cap(person.subject)} ___ ${complement}. (${infinitive})`, `Complétez au présent : ${cap(person.subject)} ___ ${complement}. (${infinitive})`, [`${stem}e`, `${stem}es`, `${stem}ons`, `${stem}ez`, `${stem}ent`], answer, `With ${person.subject}, ${infinitive} takes the ending -${erEndings[person.index]}.`, `Avec ${person.subject}, ${infinitive} prend la terminaison -${erEndings[person.index]}.`, variant)
+}
+
+function etreAvoir(variant: number): QData {
+  const rows = [
+    ['Je', 'suis', 'fatiguée après le voyage', ['ai', 'es', 'sommes']], ['Tu', 'as', 'raison de vérifier', ['es', 'a', 'suis']],
+    ['Nous', 'avons', 'besoin de temps', ['sommes', 'êtes', 'ont']], ['Elles', 'sont', 'en retard', ['ont', 'êtes', 'sommes']],
+    ['Vous', 'avez', 'un rendez-vous', ['êtes', 'avons', 'ont']], ['Il', 'est', 'prêt à commencer', ['a', 'es', 'sont']],
+  ] as const
+  const [subject, answer, rest, wrong] = pick(rows, variant)
+  return mc(`Complete: ${subject} ___ ${rest}.`, `Complétez : ${subject} ___ ${rest}.`, [answer, ...wrong], answer, `The expression requires ${['suis', 'es', 'est', 'sommes', 'êtes', 'sont'].includes(answer) ? 'être' : 'avoir'}: ${subject.toLowerCase()} ${answer}.`, `L’expression demande ${['suis', 'es', 'est', 'sommes', 'êtes', 'sont'].includes(answer) ? 'être' : 'avoir'} : ${subject.toLowerCase()} ${answer}.`, variant)
+}
+
+function questionForms(variant: number): QData {
+  const rows = [
+    ['Tu viens demain.', 'Est-ce que tu viens demain ?', ['Est-ce tu viens demain ?', 'Tu est-ce que viens demain ?', 'Viens tu est-ce que demain ?']],
+    ['Il parle français.', 'Parle-t-il français ?', ['Parle-il français ?', 'Il parle-t français ?', 'Parle-t-elle français ?']],
+    ['Vous avez reçu mon message.', 'Avez-vous reçu mon message ?', ['Avez vous reçu mon message ?', 'Vous avez-vous reçu mon message ?', 'Ont-vous reçu mon message ?']],
+    ['Elle habite à Paris.', 'Où habite-t-elle ?', ['Où habite-elle ?', 'Où elle habite-t ?', 'Habite où-t-elle ?']],
+  ] as const
+  const [statement, answer, wrong] = pick(rows, variant)
+  return mc(`Transform into a correct question: “${statement}”`, `Transformez en question correcte : « ${statement} »`, [answer, ...wrong], answer, 'Use est-ce que or a correctly formed inversion. Insert -t- only when needed for pronunciation.', 'Utilisez est-ce que ou une inversion correcte. Insérez -t- seulement si nécessaire pour la prononciation.', variant)
+}
+
+function interrogativeAdverbs(variant: number): QData {
+  const rows = [
+    ['reason', 'Pourquoi', 'Pourquoi partez-vous si tôt ?'], ['place', 'Où', 'Où habitez-vous ?'], ['time', 'Quand', 'Quand commence la réunion ?'],
+    ['manner', 'Comment', 'Comment allez-vous au travail ?'], ['quantity', 'Combien', 'Combien de temps restez-vous ?'],
+  ] as const
+  const [meaning, answer, sentence] = pick(rows, variant)
+  return mc(`Which interrogative adverb asks about ${meaning}?`, `Quel adverbe interrogatif porte sur ${meaning === 'reason' ? 'la cause' : meaning === 'place' ? 'le lieu' : meaning === 'time' ? 'le moment' : meaning === 'manner' ? 'la manière' : 'la quantité'} ?`, [answer, 'Où', 'Quand', 'Pourquoi', 'Comment', 'Combien'], answer, `${answer} is used in: ${sentence}`, `${answer} s’utilise dans : ${sentence}`, variant)
+}
+
+function answerSi(variant: number): QData {
+  const rows = [
+    ['Tu ne viens pas ce soir ?', 'Si, je viens.', 'You are coming.'], ['Vous n’avez pas reçu le document ?', 'Si, je l’ai reçu.', 'You received it.'],
+    ['Elle ne travaille pas demain ?', 'Si, elle travaille.', 'She is working.'], ['Ils ne sont pas disponibles ?', 'Si, ils le sont.', 'They are available.'],
+  ] as const
+  const [question, answer, meaning] = pick(rows, variant)
+  return mc(`${meaning} Answer the negative question: “${question}”`, `${meaning} Répondez à la question négative : « ${question} »`, [answer, answer.replace(/^Si/, 'Oui'), answer.replace(/^Si/, 'Non'), 'Non, pas du tout.'], answer, 'Use si, not oui, to contradict a negative question.', 'On utilise si, et non oui, pour contredire une question négative.', variant)
+}
+
+function interrogativePronouns(variant: number): QData {
+  const rows = [
+    ['masculine singular', 'lequel'], ['feminine singular', 'laquelle'], ['masculine plural', 'lesquels'], ['feminine plural', 'lesquelles'],
+    ['a person as subject', 'qui'], ['a thing after a preposition', 'quoi'],
+  ] as const
+  const [meaning, answer] = pick(rows, variant)
+  return mc(`Choose the interrogative pronoun for ${meaning}.`, `Choisissez le pronom interrogatif pour ${meaning}.`, [answer, 'lequel', 'laquelle', 'lesquels', 'lesquelles', 'qui', 'quoi'], answer, `${answer} matches ${meaning}.`, `${answer} correspond à ${meaning}.`, variant)
+}
+
+function presentContinuous(variant: number): QData {
+  const [, , complement] = pick(erVerbs, variant); const infinitive = pick(erVerbs, variant)[0]
+  return mc(`Complete: Je suis ___ ${infinitive} ${complement}.`, `Complétez : Je suis ___ ${infinitive} ${complement}.`, ['en train de', 'en train à', 'dans train de', 'en cours à'], 'en train de', 'Être en train de + infinitive expresses an action in progress.', 'Être en train de + infinitif exprime une action en cours.', variant)
+}
+
+function imperative(variant: number): QData {
+  const rows = [
+    ['écouter', 'tu', 'Écoute le professeur !', ['Écoutes le professeur !', 'Écoutez le professeur !', 'Écoutons le professeur !']],
+    ['prendre', 'vous', 'Prenez le bus !', ['Prendez le bus !', 'Prenons le bus !', 'Prends le bus !']],
+    ['aller', 'tu', 'Vas-y !', ['Va-y !', 'Allez-y !', 'Allons-y !']],
+    ['attendre', 'nous', 'Attendons ici !', ['Attendez ici !', 'Attend ici !', 'Attends ici !']],
+  ] as const
+  const [verb, person, answer, wrong] = pick(rows, variant)
+  return mc(`Choose the ${person} imperative of ${verb}.`, `Choisissez l’impératif ${person} de ${verb}.`, [answer, ...wrong], answer, 'The imperative uses special person forms and omits the subject pronoun.', 'L’impératif utilise des formes particulières et omet le pronom sujet.', variant)
+}
+
+function futureProche(variant: number): QData {
+  const [infinitive, , complement] = pick(erVerbs, variant * 3); const forms = ['vais', 'vas', 'va', 'allons', 'allez', 'vont']; const person = pick(people, variant)
+  const answer = `${cap(person.subject)} ${forms[person.index]} ${infinitive} ${complement}.`
+  return mc('Choose the correct near-future sentence.', 'Choisissez la phrase correcte au futur proche.', [answer, `${cap(person.subject)} ${forms[person.index]} ${infinitive.replace(/er$/, 'é')} ${complement}.`, `${cap(person.subject)} ${infinitive} ${forms[person.index]} ${complement}.`, `${cap(person.subject)} ${forms[person.index]} ${infinitive.replace(/er$/, 'e')} ${complement}.`], answer, 'Near future = aller in the present + infinitive.', 'Futur proche = aller au présent + infinitif.', variant)
+}
+
+function passeCompose(variant: number): QData {
+  const rows = [
+    ['Hier, j’___ un documentaire.', 'ai regardé', ['suis regardé', 'regardais', 'ai regarder']], ['Elle ___ au marché ce matin.', 'est allée', ['a allé', 'est allé', 'allait']],
+    ['Nous ___ le rapport avant midi.', 'avons fini', ['sommes fini', 'avons finis', 'finissions']], ['Ils ___ très tard.', 'sont arrivés', ['ont arrivé', 'sont arrivé', 'arrivaient']],
+    ['Tu ___ ce message ?', 'as reçu', ['es reçu', 'recevais', 'as recevoir']], ['Marie ___ à huit heures.', 's’est réveillée', ['a réveillé', 's’est réveillé', 'se réveillait']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete in the passé composé: ${sentence}`, `Complétez au passé composé : ${sentence}`, [answer, ...wrong], answer, 'Passé composé uses the correct auxiliary plus a past participle; with être, agreement may be required.', 'Le passé composé utilise le bon auxiliaire et un participe passé ; avec être, l’accord peut être nécessaire.', variant)
+}
+
+function passeComposeAvoir(variant: number): QData {
+  const rows = [
+    ['Nous', 'finir', 'avons fini', ['sommes finis', 'avons finis', 'avons finir']], ['Elle', 'prendre', 'a pris', ['est prise', 'a prendu', 'avait pris']],
+    ['Vous', 'voir', 'avez vu', ['êtes vu', 'avez vus', 'avez voir']], ['Ils', 'écrire', 'ont écrit', ['sont écrits', 'ont écris', 'ont écrire']],
+  ] as const
+  const [subject, verb, answer, wrong] = pick(rows, variant)
+  return mc(`Choose the passé composé of ${verb}: ${subject} ___.`, `Choisissez le passé composé de ${verb} : ${subject} ___.`, [answer, ...wrong], answer, `${verb} normally uses avoir in the passé composé.`, `${verb} utilise normalement avoir au passé composé.`, variant)
+}
+
+function passeComposeEtre(variant: number): QData {
+  const rows = [
+    ['Elle', 'aller', 'est allée', ['a allé', 'est allé', 'a allée']], ['Ils', 'arriver', 'sont arrivés', ['ont arrivé', 'sont arrivé', 'ont arrivés']],
+    ['Marie', 'partir', 'est partie', ['a parti', 'est parti', 'a partie']], ['Elles', 'venir', 'sont venues', ['ont venu', 'sont venus', 'ont venues']],
+  ] as const
+  const [subject, verb, answer, wrong] = pick(rows, variant)
+  return mc(`Complete: ${subject} ___ hier. (${verb})`, `Complétez : ${subject} ___ hier. (${verb})`, [answer, ...wrong], answer, `${verb} uses être; the past participle agrees with the subject.`, `${verb} utilise être ; le participe passé s’accorde avec le sujet.`, variant)
+}
+
+function imparfait(variant: number): QData {
+  const rows = [
+    ['Quand j’étais petite, je ___ souvent chez ma tante.', 'allais', ['suis allée', 'irai', 'vais']], ['Pendant que nous ___, le téléphone a sonné.', 'dormions', ['avons dormi', 'dormirons', 'dormons']],
+    ['Il ___ froid tous les matins.', 'faisait', ['a fait', 'fera', 'fait']], ['Vous ___ toujours le train de huit heures.', 'preniez', ['avez pris', 'prendrez', 'prenez']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Choose the correct imparfait form: ${sentence}`, `Choisissez la bonne forme à l’imparfait : ${sentence}`, [answer, ...wrong], answer, 'Use the imparfait for background, repeated habits, or an action in progress in the past.', 'On utilise l’imparfait pour le décor, les habitudes ou une action en cours dans le passé.', variant)
+}
+
+function pcVsImparfait(variant: number): QData {
+  const rows = [
+    ['Il ___ quand je ___ de la maison.', 'pleuvait / suis sortie', ['a plu / sortais', 'pleut / suis sortie', 'pleuvait / sortais soudain']],
+    ['Pendant que je ___, mon collègue m’___.', 'travaillais / a appelé', ['ai travaillé / appelait', 'travaillerai / appelle', 'travaille / a appelé']],
+    ['Nous ___ le dîner quand la lumière s’___.', 'préparions / est éteinte', ['avons préparé / éteignait', 'préparons / est éteinte', 'préparerons / éteignait']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete with the best tense contrast: ${sentence}`, `Complétez avec le meilleur contraste de temps : ${sentence}`, [answer, ...wrong], answer, 'Use the imparfait for an ongoing background action and the passé composé for the completed event.', 'Utilisez l’imparfait pour l’action en cours et le passé composé pour l’événement terminé.', variant)
+}
+
+function recentPast(variant: number): QData {
+  const verb = pick(['terminer', 'arriver', 'recevoir', 'manger', 'appeler', 'partir'], variant)
+  return mc(`Complete: Je viens ___ ${verb}.`, `Complétez : Je viens ___ ${verb}.`, ['de', 'à', 'pour', 'en'], 'de', 'Recent past = venir de + infinitive.', 'Passé récent = venir de + infinitif.', variant)
+}
+
+function plusQueParfait(variant: number): QData {
+  const rows = [
+    ['Quand je suis arrivée, ils ___ déjà ___.', 'étaient / partis', ['ont / partis', 'avaient / partir', 'sont / partis']], ['Elle a compris qu’elle ___ son dossier.', 'avait oublié', ['a oublié', 'était oubliée', 'oubliait']],
+    ['Nous avons découvert que vous ___ le message.', 'aviez reçu', ['avez reçu', 'étiez reçus', 'receviez']], ['Il était fatigué parce qu’il ___ toute la nuit.', 'avait travaillé', ['a travaillé', 'était travaillé', 'travaillait soudain']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete in the plus-que-parfait: ${sentence}`, `Complétez au plus-que-parfait : ${sentence}`, [answer, ...wrong], answer, 'Plus-que-parfait = imperfect of avoir or être + past participle.', 'Plus-que-parfait = imparfait de avoir ou être + participe passé.', variant)
+}
+
+function passeSimple(variant: number): QData {
+  const rows = [['être', 'il fut'], ['avoir', 'il eut'], ['faire', 'il fit'], ['venir', 'il vint'], ['prendre', 'il prit'], ['voir', 'il vit']] as const
+  const [verb, answer] = pick(rows, variant)
+  return mc(`Choose the literary passé simple form of ${verb}.`, `Choisissez la forme littéraire au passé simple de ${verb}.`, [answer, answer.replace('il ', 'il a '), answer.replace('il ', 'il était '), answer.replace('il ', 'il va ')], answer, 'The passé simple is mainly used in written narration.', 'Le passé simple s’utilise surtout dans le récit écrit.', variant)
+}
+
+function objectPronouns(variant: number): QData {
+  const rows = [
+    ['Je regarde le film.', 'Je le regarde.', ['Je lui regarde.', 'J’y regarde.', 'J’en regarde.']], ['Je téléphone à Marie.', 'Je lui téléphone.', ['Je la téléphone.', 'Je le téléphone.', 'J’y téléphone.']],
+    ['Nous attendons les invités.', 'Nous les attendons.', ['Nous leur attendons.', 'Nous en attendons.', 'Nous y attendons.']], ['Elle parle à ses collègues.', 'Elle leur parle.', ['Elle les parle.', 'Elle en parle à eux.', 'Elle y parle.']],
+  ] as const
+  const [source, answer, wrong] = pick(rows, variant)
+  return mc(`Replace the highlighted complement: ${source}`, `Remplacez le complément : ${source}`, [answer, ...wrong], answer, 'Choose a direct or indirect object pronoun according to the verb construction.', 'Choisissez un pronom complément direct ou indirect selon la construction du verbe.', variant)
+}
+
+function pronounPlacement(variant: number): QData {
+  const rows = [
+    ['Je vais donner le document à Marie.', 'Je vais le lui donner.', ['Je le vais lui donner.', 'Je vais lui le donner.', 'Je vais donner le lui.']],
+    ['Ne montre pas la photo à Paul.', 'Ne la lui montre pas.', ['Ne lui la montre pas.', 'La ne lui montre pas.', 'Ne montre-la-lui pas.']],
+    ['J’ai acheté les billets.', 'Je les ai achetés.', ['J’ai les achetés.', 'Je ai les acheté.', 'Je leur ai achetés.']],
+  ] as const
+  const [source, answer, wrong] = pick(rows, variant)
+  return mc(`Choose the correct pronoun placement: ${source}`, `Choisissez la bonne place des pronoms : ${source}`, [answer, ...wrong], answer, 'Object pronouns normally come before the conjugated verb or before the infinitive that governs them.', 'Les pronoms compléments se placent normalement avant le verbe conjugué ou devant l’infinitif dont ils dépendent.', variant)
+}
+
+function yEn(variant: number): QData {
+  const rows = [
+    ['Je vais au laboratoire.', 'J’y vais.', ['J’en vais.', 'Je le vais.', 'Je lui vais.']], ['Je parle de ce projet.', 'J’en parle.', ['J’y parle.', 'Je le parle.', 'Je lui parle.']],
+    ['Je veux trois cafés.', 'J’en veux trois.', ['J’y veux trois.', 'Je les veux de trois.', 'Je veux en trois.']], ['Elle pense à son examen.', 'Elle y pense.', ['Elle en pense.', 'Elle le pense à.', 'Elle lui pense.']],
+  ] as const
+  const [source, answer, wrong] = pick(rows, variant)
+  return mc(`Replace the complement with y or en: ${source}`, `Remplacez le complément par y ou en : ${source}`, [answer, ...wrong], answer, 'Y often replaces à + thing/place. En often replaces de + thing or a quantity.', 'Y remplace souvent à + chose/lieu. En remplace souvent de + chose ou une quantité.', variant)
+}
+
+function doublePronouns(variant: number): QData {
+  const rows = [
+    ['Je donne le livre à Marie.', 'Je le lui donne.', ['Je lui le donne.', 'Je le donne lui.', 'Je lui donne le.']], ['Nous envoyons les documents à nos collègues.', 'Nous les leur envoyons.', ['Nous leur les envoyons.', 'Nous les envoyons leur.', 'Nous en leur envoyons.']],
+    ['Tu prêtes ta voiture à Paul.', 'Tu la lui prêtes.', ['Tu lui la prêtes.', 'Tu la prêtes lui.', 'Tu y lui prêtes.']], ['Elle apporte des gâteaux à ses amis.', 'Elle leur en apporte.', ['Elle en leur apporte.', 'Elle les leur apporte des.', 'Elle y en apporte.']],
+  ] as const
+  const [source, answer, wrong] = pick(rows, variant)
+  return mc(`Replace both complements: ${source}`, `Remplacez les deux compléments : ${source}`, [answer, ...wrong], answer, 'French double pronouns follow a fixed order: me/te/se/nous/vous → le/la/les → lui/leur → y → en.', 'Les doubles pronoms suivent un ordre fixe : me/te/se/nous/vous → le/la/les → lui/leur → y → en.', variant)
+}
+
+function relativeSimple(variant: number): QData {
+  const rows = [
+    ['La femme ___ parle est ma collègue.', 'qui', ['que', 'où', 'dont']], ['Le rapport ___ j’ai lu est clair.', 'que', ['qui', 'où', 'dont']],
+    ['La ville ___ j’habite est calme.', 'où', ['qui', 'que', 'dont']], ['Le projet ___ nous parlons est important.', 'dont', ['qui', 'que', 'où']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete with the correct relative pronoun: ${sentence}`, `Complétez avec le bon pronom relatif : ${sentence}`, [answer, ...wrong], answer, 'Use qui for a subject, que for a direct object, où for place/time, and dont for de.', 'Utilisez qui pour un sujet, que pour un COD, où pour le lieu/temps et dont pour de.', variant)
+}
+
+function relativeComplex(variant: number): QData {
+  const rows = [
+    ['La décision à ___ je pense est difficile.', 'laquelle', ['lequel', 'dont', 'que']], ['Les collègues avec ___ je travaille sont disponibles.', 'lesquels', ['lesquelles', 'dont', 'qui']],
+    ['Le laboratoire près du ___ se trouve la gare est fermé.', 'quel', ['laquelle', 'dont', 'que']], ['Les raisons pour ___ elle refuse sont claires.', 'lesquelles', ['lesquels', 'dont', 'où']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete with a compound relative pronoun: ${sentence}`, `Complétez avec un pronom relatif composé : ${sentence}`, [answer, ...wrong], answer, 'Compound relative pronouns agree with the antecedent and follow a preposition.', 'Les pronoms relatifs composés s’accordent avec l’antécédent et suivent une préposition.', variant)
+}
+
+function demonstratives(variant: number): QData {
+  const rows = [
+    ['Which book do you prefer?', 'celui', 'masculine singular'], ['Which dress do you prefer?', 'celle', 'feminine singular'], ['Which documents do you need?', 'ceux', 'masculine plural'], ['Which keys are yours?', 'celles', 'feminine plural'],
+  ] as const
+  const [context, answer, form] = pick(rows, variant)
+  return mc(`${context} Choose the ${form} demonstrative pronoun.`, `${context} Choisissez le pronom démonstratif ${form}.`, [answer, 'celui', 'celle', 'ceux', 'celles'], answer, `${answer} is the ${form} form.`, `${answer} est la forme ${form}.`, variant)
+}
+
+function indefinites(variant: number): QData {
+  const rows = [
+    ['___ peut participer à la réunion.', 'Tout le monde', ['Personne de', 'Chacun des monde', 'Quelques monde']], ['Je n’ai vu ___ dans le couloir.', 'personne', ['quelqu’un', 'chacun', 'plusieurs']],
+    ['___ étudiants ont répondu.', 'Plusieurs', ['Chaque', 'Tout', 'Quelqu’un']], ['___ participant doit signer.', 'Chaque', ['Plusieurs', 'Tous', 'Quelqu’un']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete with the correct indefinite word: ${sentence}`, `Complétez avec le bon indéfini : ${sentence}`, [answer, ...wrong], answer, 'Choose the indefinite form that matches meaning and number.', 'Choisissez la forme indéfinie qui correspond au sens et au nombre.', variant)
+}
+
+function conditionalPoliteness(variant: number): QData {
+  const rows = [
+    ['Je ___ un café, s’il vous plaît.', 'voudrais', ['veux', 'voudrai', 'voulais']], ['___-vous m’aider, s’il vous plaît ?', 'Pourriez', ['Pouvez', 'Pourrez', 'Pouviez']],
+    ['Nous ___ réserver une table.', 'aimerions', ['aimons', 'aimerons', 'aimions']], ['Ce ___ possible de déplacer le rendez-vous ?', 'serait', ['sera', 'est', 'était']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Choose the polite conditional form: ${sentence}`, `Choisissez la forme polie au conditionnel : ${sentence}`, [answer, ...wrong], answer, 'The conditional softens a request and sounds more polite.', 'Le conditionnel atténue une demande et la rend plus polie.', variant)
+}
+
+function futureSimple(variant: number): QData {
+  const rows = [
+    ['Demain, je ___ le rapport.', 'terminerai', ['termine', 'terminais', 'terminerais']], ['Vous ___ les résultats lundi.', 'recevrez', ['recevez', 'recevriez', 'receviez']],
+    ['Nous ___ à Paris la semaine prochaine.', 'irons', ['allons', 'irions', 'allions']], ['Elle ___ répondre plus tard.', 'pourra', ['peut', 'pourrait', 'pouvait']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete in the future simple: ${sentence}`, `Complétez au futur simple : ${sentence}`, [answer, ...wrong], answer, 'The future simple uses the future stem plus the appropriate ending.', 'Le futur simple utilise le radical du futur et la terminaison adaptée.', variant)
+}
+
+function irregularFuture(variant: number): QData {
+  const rows = [['être', 'ser-', 'je serai'], ['avoir', 'aur-', 'tu auras'], ['aller', 'ir-', 'nous irons'], ['faire', 'fer-', 'vous ferez'], ['venir', 'viendr-', 'ils viendront'], ['pouvoir', 'pourr-', 'elle pourra']] as const
+  const [verb, stem, answer] = pick(rows, variant)
+  const cleanStem = stem.replace(/-$/, '')
+  const conditionalTrap = answer.replace(/ai$|as$|ons$|ez$|ont$|a$/, 'ais')
+  const infinitiveTrap = answer.replace(cleanStem, verb)
+  const missingLetterTrap = answer.replace(cleanStem, cleanStem.slice(0, -1))
+  const extraLetterTrap = answer.replace(cleanStem, `${cleanStem}r`)
+  return mc(`Choose the correct future form of ${verb} (stem ${stem}).`, `Choisissez la bonne forme au futur de ${verb} (radical ${stem}).`, [answer, conditionalTrap, infinitiveTrap, missingLetterTrap, extraLetterTrap], answer, `${verb} uses the irregular future stem ${stem}.`, `${verb} utilise le radical irrégulier ${stem}.`, variant)
+}
+
+function siPresentFuture(variant: number): QData {
+  const rows = [
+    ['Si tu ___ tôt, nous ___ le train.', 'pars / prendrons', ['partiras / prendrons', 'partais / prendrions', 'pars / prenions']], ['S’il ___ beau, nous ___ au parc.', 'fait / irons', ['fera / irons', 'faisait / irions', 'fait / allions']],
+    ['Si vous ___ le dossier, je vous ___ demain.', 'envoyez / répondrai', ['enverrez / répondrai', 'envoyiez / répondrais', 'envoyez / répondais']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete the real condition: ${sentence}`, `Complétez la condition réelle : ${sentence}`, [answer, ...wrong], answer, 'For a likely future condition: si + present, then future simple.', 'Pour une condition future probable : si + présent, puis futur simple.', variant)
+}
+
+function siHypothesis(variant: number): QData {
+  const rows = [
+    ['Si j’___ plus de temps, je ___ davantage.', 'avais / lirais', ['aurais / lirais', 'ai / lirais', 'avais / lirai']], ['Si nous ___ près du bureau, nous ___ à pied.', 'habitions / irions', ['habiterions / irions', 'habitons / irions', 'habitions / irons']],
+    ['Si elle ___ la réponse, elle nous la ___.', 'savait / dirait', ['saurait / dirait', 'sait / dirait', 'savait / dira']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete the hypothetical condition: ${sentence}`, `Complétez l’hypothèse : ${sentence}`, [answer, ...wrong], answer, 'For a present hypothesis: si + imparfait, then conditional present.', 'Pour une hypothèse présente : si + imparfait, puis conditionnel présent.', variant)
+}
+
+function subjunctiveObligation(variant: number): QData {
+  const rows = [
+    ['Il faut que tu ___ à l’heure.', 'sois', ['es', 'seras', 'étais']], ['Je veux que vous ___ ce document.', 'lisiez', ['lisez', 'lirez', 'lire']],
+    ['Bien qu’elle ___ fatiguée, elle continue.', 'soit', ['est', 'sera', 'était']], ['Il est nécessaire que nous ___ rapidement.', 'répondions', ['répondons', 'répondrons', 'répondre']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete with the subjunctive: ${sentence}`, `Complétez au subjonctif : ${sentence}`, [answer, ...wrong], answer, 'Necessity, desire, and some conjunctions trigger the subjunctive.', 'La nécessité, la volonté et certaines conjonctions déclenchent le subjonctif.', variant)
+}
+
+function timeChronology(variant: number): QData {
+  const rows = [
+    ['___, je prends mon petit-déjeuner ; ensuite, je pars.', 'D’abord', ['Enfin', 'Pendant', 'Depuis']], ['Je travaille ici ___ trois ans.', 'depuis', ['pendant', 'il y a', 'dans']],
+    ['Nous avons attendu ___ deux heures.', 'pendant', ['depuis', 'il y a', 'dans']], ['Elle est arrivée ___ dix minutes.', 'il y a', ['depuis', 'pendant', 'en']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Choose the correct time expression: ${sentence}`, `Choisissez la bonne expression temporelle : ${sentence}`, [answer, ...wrong], answer, 'Choose the expression according to sequence, duration, or distance from the present.', 'Choisissez l’expression selon l’ordre, la durée ou la distance par rapport au présent.', variant)
+}
+
+function timeExpressions(variant: number): QData {
+  const rows = [
+    ['Je travaille ici ___ 2024.', 'depuis', ['pendant', 'il y a', 'dans']], ['J’ai étudié ___ trois heures hier.', 'pendant', ['depuis', 'dans', 'il y a']],
+    ['Le train partira ___ vingt minutes.', 'dans', ['depuis', 'pendant', 'il y a']], ['Nous nous sommes rencontrés ___ six mois.', 'il y a', ['dans', 'depuis', 'pendant']],
+    ['___ que tu arrives, appelle-moi.', 'Dès', ['Pendant', 'Depuis', 'Il y a']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete with the best time expression: ${sentence}`, `Complétez avec la meilleure expression temporelle : ${sentence}`, [answer, ...wrong], answer, 'Time expressions distinguish duration, starting point, future delay, and elapsed time.', 'Les expressions temporelles distinguent la durée, le point de départ, le délai futur et le temps écoulé.', variant)
+}
+
+function prepositions(variant: number): QData {
+  const rows = [
+    ['Je vais ___ France.', 'en', ['au', 'aux', 'à la']], ['Il habite ___ Canada.', 'au', ['en', 'aux', 'à']], ['Nous revenons ___ États-Unis.', 'des', ['du', 'de', 'aux']],
+    ['Elle va ___ Paris demain.', 'à', ['en', 'au', 'dans']], ['Le livre est ___ la table.', 'sur', ['à', 'en', 'chez']], ['Je travaille ___ Thierry.', 'avec', ['à', 'en', 'sur']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete with the correct preposition: ${sentence}`, `Complétez avec la bonne préposition : ${sentence}`, [answer, ...wrong], answer, 'The choice of preposition depends on the place, country gender/number, or relation expressed.', 'Le choix de la préposition dépend du lieu, du genre/nombre du pays ou de la relation exprimée.', variant)
+}
+
+function negation(variant: number): QData {
+  const rows = [
+    ['Je vois quelqu’un.', 'Je ne vois personne.', ['Je ne vois pas quelqu’un.', 'Je vois ne personne.', 'Je ne personne vois.']], ['Il mange toujours ici.', 'Il ne mange jamais ici.', ['Il mange ne jamais ici.', 'Il ne mange pas jamais ici.', 'Il ne jamais mange ici.']],
+    ['Nous avons encore du pain.', 'Nous n’avons plus de pain.', ['Nous avons ne plus du pain.', 'Nous n’avons pas plus du pain.', 'Nous ne plus avons pain.']], ['Elle dit quelque chose.', 'Elle ne dit rien.', ['Elle ne dit pas rien.', 'Elle rien ne dit pas.', 'Elle ne rien dit.']],
+  ] as const
+  const [positive, answer, wrong] = pick(rows, variant)
+  return mc(`Choose the correct negative transformation: “${positive}”`, `Choisissez la bonne transformation négative : « ${positive} »`, [answer, ...wrong], answer, 'Use the appropriate negative pair around the conjugated verb.', 'Utilisez la négation adaptée autour du verbe conjugué.', variant)
+}
+
+function adverbs(variant: number): QData {
+  const rows = [
+    ['Elle répond ___.', 'rapidement', ['rapide', 'rapidementement', 'rapidée']], ['Il parle ___ pendant les réunions.', 'clairement', ['clair', 'claire', 'clarté']],
+    ['___, cette solution coûtera moins cher.', 'Probablement', ['Probable', 'Probabilité', 'Probablement de']], ['Elle est ___ disponible demain.', 'peut-être', ['peut être de', 'peut', 'être peut']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete with the correct adverb: ${sentence}`, `Complétez avec le bon adverbe : ${sentence}`, [answer, ...wrong], answer, 'Use an adverb to modify a verb or express the speaker’s degree of certainty.', 'Utilisez un adverbe pour modifier un verbe ou exprimer le degré de certitude.', variant)
+}
+
+function gerund(variant: number): QData {
+  const rows = [
+    ['Elle écoute un podcast ___ au travail.', 'en allant', ['en va', 'en aller', 'allant en']], ['Nous avons discuté ___ le déjeuner.', 'en prenant', ['en pris', 'prendre en', 'en prendre']],
+    ['Il apprend le français ___ des articles.', 'en lisant', ['en lit', 'lisant de', 'en lire']], ['Elle s’est blessée ___ au badminton.', 'en jouant', ['en joue', 'jouer en', 'en joué']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete with a gérondif: ${sentence}`, `Complétez avec un gérondif : ${sentence}`, [answer, ...wrong], answer, 'Gérondif = en + present participle; it often expresses simultaneous actions or manner.', 'Gérondif = en + participe présent ; il exprime souvent la simultanéité ou la manière.', variant)
+}
+
+function reportedSpeech(variant: number): QData {
+  const rows = [
+    ['Marie dit : « Je suis fatiguée. »', 'Marie dit qu’elle est fatiguée.', ['Marie dit elle est fatiguée.', 'Marie dit que je suis fatiguée.', 'Marie dit d’être fatiguée.']],
+    ['Le professeur dit : « Lisez le texte. »', 'Le professeur nous dit de lire le texte.', ['Le professeur nous dit que lire le texte.', 'Le professeur dit nous lisons le texte.', 'Le professeur nous dit lire le texte.']],
+    ['Paul demande : « Est-ce que tu viens ? »', 'Paul demande si je viens.', ['Paul demande que je viens.', 'Paul demande est-ce que je viens.', 'Paul demande de je viens.']],
+  ] as const
+  const [direct, answer, wrong] = pick(rows, variant)
+  return mc(`Choose the correct reported speech: ${direct}`, `Choisissez le bon discours rapporté : ${direct}`, [answer, ...wrong], answer, 'Reported statements use que, yes/no questions use si, and commands often use de + infinitive.', 'Le discours rapporté utilise que, les questions fermées utilisent si et les ordres utilisent souvent de + infinitif.', variant)
+}
+
+function comparative(variant: number): QData {
+  const rows = [
+    ['Ce train est ___ rapide que l’autre.', 'plus', ['le plus', 'aussi de', 'mieux']], ['Elle travaille ___ efficacement que moi.', 'plus', ['meilleur', 'le plus', 'plus de']],
+    ['Cette option coûte ___ cher que la première.', 'moins', ['le moins', 'moins de', 'petit']], ['Il court ___ que son frère.', 'mieux', ['meilleur', 'plus bon', 'le mieux de']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete the comparison: ${sentence}`, `Complétez la comparaison : ${sentence}`, [answer, ...wrong], answer, 'Comparatives use plus, moins, or aussi + adjective/adverb + que. Bien becomes mieux.', 'Le comparatif utilise plus, moins ou aussi + adjectif/adverbe + que. Bien devient mieux.', variant)
+}
+
+function superlative(variant: number): QData {
+  const rows = [
+    ['C’est ___ meilleur restaurant du quartier.', 'le', ['la', 'un', 'plus']], ['Marie est ___ plus organisée de l’équipe.', 'la', ['le', 'une', 'les']],
+    ['Ce sont ___ exercices les plus difficiles.', 'les', ['des', 'le', 'plus']], ['Elle répond ___ rapidement de tous.', 'le plus', ['la plus', 'plus que', 'le meilleur']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete the superlative: ${sentence}`, `Complétez le superlatif : ${sentence}`, [answer, ...wrong], answer, 'The superlative uses the definite article + plus/moins, with agreement when required.', 'Le superlatif utilise l’article défini + plus/moins, avec accord si nécessaire.', variant)
+}
+
+function connectors(variant: number): QData {
+  const rows = [
+    ['Je suis fatiguée ; ___, je vais me coucher tôt.', 'donc', ['cependant', 'car', 'd’abord']], ['La solution est pratique ; ___, elle coûte cher.', 'cependant', ['donc', 'parce que', 'ensuite']],
+    ['Je suis restée chez moi ___ il pleuvait.', 'parce que', ['donc', 'malgré', 'en revanche']], ['___, je prépare le dossier ; ensuite, je l’envoie.', 'D’abord', ['Pourtant', 'Car', 'Ainsi que']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Choose the logical connector: ${sentence}`, `Choisissez le connecteur logique : ${sentence}`, [answer, ...wrong], answer, 'Choose the connector according to the logical relation: cause, consequence, contrast, or sequence.', 'Choisissez le connecteur selon la relation logique : cause, conséquence, opposition ou ordre.', variant)
+}
+
+function cause(variant: number): QData {
+  const rows = [
+    ['___ ton aide, j’ai terminé à temps.', 'Grâce à', ['À cause de', 'Malgré', 'Pendant']], ['Le train est en retard ___ une panne.', 'à cause d’', ['grâce à', 'malgré', 'pour']],
+    ['Nous sommes rentrés tôt ___ il pleuvait.', 'parce qu’', ['donc', 'pourtant', 'grâce à']], ['___ la pluie, nous avons continué.', 'Malgré', ['Grâce à', 'Parce que', 'À cause']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete with the appropriate cause or concession expression: ${sentence}`, `Complétez avec l’expression de cause ou de concession adaptée : ${sentence}`, [answer, ...wrong], answer, 'Grâce à introduces a positive cause; à cause de a negative cause; malgré a concession.', 'Grâce à introduit une cause positive ; à cause de une cause négative ; malgré une concession.', variant)
+}
+
+function nominalisation(variant: number): QData {
+  const rows = [
+    ['décider', 'la décision', ['la décidation', 'le décidement', 'la décide']], ['développer', 'le développement', ['la développation', 'le développe', 'la développure']],
+    ['réduire', 'la réduction', ['le réduisement', 'la réduition', 'le réduire']], ['améliorer', 'l’amélioration', ['le améliorage', 'l’améliorement', 'la amélioraison']],
+  ] as const
+  const [verb, answer, wrong] = pick(rows, variant)
+  return mc(`Choose the correct nominalisation of “${verb}”.`, `Choisissez la nominalisation correcte de « ${verb} ».`, [answer, ...wrong], answer, 'Nominalisation replaces a verb with a noun, often used in formal writing.', 'La nominalisation remplace un verbe par un nom, souvent dans un style formel.', variant)
+}
+
+function passive(variant: number): QData {
+  const rows = [
+    ['Le technicien prépare les échantillons.', 'Les échantillons sont préparés par le technicien.', ['Les échantillons ont préparé le technicien.', 'Les échantillons sont préparer par le technicien.', 'Les échantillons prépare par le technicien.']],
+    ['La direction annoncera la décision demain.', 'La décision sera annoncée demain par la direction.', ['La décision est annoncera demain.', 'La décision sera annoncer demain.', 'La décision aura annoncée demain.']],
+    ['On a envoyé les lettres hier.', 'Les lettres ont été envoyées hier.', ['Les lettres sont été envoyées hier.', 'Les lettres ont envoyé hier.', 'Les lettres ont été envoyés hier.']],
+  ] as const
+  const [active, answer, wrong] = pick(rows, variant)
+  return mc(`Choose the correct passive transformation: ${active}`, `Choisissez la bonne transformation au passif : ${active}`, [answer, ...wrong], answer, 'Passive voice = être in the required tense + past participle agreeing with the subject.', 'Voix passive = être au temps requis + participe passé accordé avec le sujet.', variant)
+}
+
+function register(variant: number): QData {
+  const rows = [
+    ['a formal email', 'Je vous remercie par avance pour votre réponse.', ['Salut, réponds vite.', 'Tu me files une réponse ?', 'Ça roule pour répondre ?']],
+    ['a job interview', 'Je souhaiterais obtenir davantage d’informations.', ['Je veux plus d’infos, là.', 'Filez-moi les détails.', 'C’est quoi les infos ?']],
+    ['a neutral workplace message', 'Pouvez-vous me transmettre le document ?', ['Tu me balances le doc ?', 'File-moi ça.', 'Envoie le truc, stp.']],
+  ] as const
+  const [context, answer, wrong] = pick(rows, variant)
+  return mc(`Choose the sentence suitable for ${context}.`, `Choisissez la phrase adaptée à ${context}.`, [answer, ...wrong], answer, 'Register must match the situation and relationship between speakers.', 'Le registre doit correspondre à la situation et à la relation entre les interlocuteurs.', variant)
+}
+
+function truncation(variant: number): QData {
+  const rows = [['restaurant', 'resto'], ['cinéma', 'ciné'], ['photographie', 'photo'], ['laboratoire', 'labo'], ['manifestation', 'manif'], ['professeur', 'prof']] as const
+  const [full, answer] = pick(rows, variant)
+  return mc(`Choose the common informal truncation of “${full}”.`, `Choisissez la troncation familière courante de « ${full} ».`, [answer, `${full.slice(0, 3)}x`, `${full.slice(0, 4)}eur`, `${full.slice(0, 2)}ou`, `${full.slice(0, 5)}ette`], answer, `${answer} is the common informal shortened form of ${full}.`, `${answer} est la forme familière abrégée courante de ${full}.`, variant)
+}
+
+function presentatives(variant: number): QData {
+  const rows = [
+    ['___ un problème dans le dossier.', 'Il y a', ['C’est', 'Il est', 'Voilà de']], ['___ mon collègue, Thierry.', 'Voici', ['Il y a de', 'C’est que', 'Il est']],
+    ['___ une bonne idée !', 'C’est', ['Il est', 'Il y a de', 'Voici de']], ['___ les documents que vous avez demandés.', 'Voilà', ['Il est', 'C’est de', 'Il y a les']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete with the correct presentative: ${sentence}`, `Complétez avec le bon présentatif : ${sentence}`, [answer, ...wrong], answer, 'Use c’est, il y a, voici, or voilà according to whether you identify, state existence, or present something.', 'Utilisez c’est, il y a, voici ou voilà selon qu’on identifie, signale l’existence ou présente quelque chose.', variant)
+}
+
+function cEstIlEst(variant: number): QData {
+  const rows = [
+    ['___ médecin.', 'Il est', ['C’est', 'Il y a', 'Voici']], ['___ un médecin très compétent.', 'C’est', ['Il est', 'Il y a', 'Voilà de']],
+    ['___ intéressant de lire cet article.', 'C’est', ['Il est un', 'Voici', 'Il y a']], ['___ disponible demain.', 'Elle est', ['C’est elle', 'Il y a elle', 'Voici elle']],
+  ] as const
+  const [sentence, answer, wrong] = pick(rows, variant)
+  return mc(`Complete: ${sentence}`, `Complétez : ${sentence}`, [answer, ...wrong], answer, 'Use il/elle est before a profession without an article or an adjective; use c’est before a noun phrase.', 'Utilisez il/elle est devant une profession sans article ou un adjectif ; utilisez c’est devant un groupe nominal.', variant)
+}
+
+function cleft(variant: number): QData {
+  const rows = [
+    ['Marie a préparé le rapport.', 'C’est Marie qui a préparé le rapport.', ['C’est Marie que a préparé le rapport.', 'Marie c’est qui a préparé le rapport.', 'C’est qui Marie a préparé le rapport.']],
+    ['J’ai choisi cette option.', 'C’est cette option que j’ai choisie.', ['C’est cette option qui j’ai choisie.', 'Cette option c’est que j’ai choisie.', 'C’est que cette option j’ai choisi.']],
+    ['Nous travaillons le mieux le matin.', 'C’est le matin que nous travaillons le mieux.', ['C’est le matin qui nous travaillons le mieux.', 'Le matin c’est qui nous travaillons.', 'C’est que le matin nous travaillons.']],
+  ] as const
+  const [base, answer, wrong] = pick(rows, variant)
+  return mc(`Choose the correct cleft sentence to emphasize one element: ${base}`, `Choisissez la phrase clivée correcte pour mettre un élément en relief : ${base}`, [answer, ...wrong], answer, 'Use c’est ... qui for a subject and c’est ... que for an object or complement.', 'Utilisez c’est ... qui pour un sujet et c’est ... que pour un objet ou complément.', variant)
+}
+
+const groupGenerators: Record<Group, (variant: number) => QData> = {
+  articlesGender, definiteArticles, indefiniteArticles, contractedArticles, pluralNouns, adjectiveAgreement, possessives,
+  presentEr, etreAvoir, questionForms, interrogativeAdverbs, answerSi, interrogativePronouns, presentContinuous,
+  imperative, futureProche, passeCompose, passeComposeAvoir, passeComposeEtre, imparfait, pcVsImparfait, recentPast,
+  plusQueParfait, passeSimple, objectPronouns, pronounPlacement, yEn, doublePronouns, relativeSimple, relativeComplex,
+  demonstratives, indefinites, conditionalPoliteness, futureSimple, irregularFuture, siPresentFuture, siHypothesis,
+  subjunctiveObligation, timeChronology, timeExpressions, prepositions, negation, adverbs, gerund, reportedSpeech,
+  comparative, superlative, connectors, cause, nominalisation, passive, register, truncation, presentatives, cEstIlEst,
+  cleft,
+  mixed: (variant) => pick([
+    articlesGender, presentEr, passeCompose, pcVsImparfait, objectPronouns, relativeSimple, connectors, prepositions,
+    comparative, negation, timeExpressions, questionForms,
+  ], variant)(variant),
+}
+
+function buildQuestion(spec: TopicSpec, variant: number): Question {
+  const data = addPrefix(groupGenerators[spec.group](variant), spec, variant)
+  return { id: `gq-v2-${spec.id}-${String(variant + 1).padStart(3, '0')}`, topicId: spec.id, ...data }
+}
+
+function buildQuestionBank(targetSize: number): Question[] {
+  const bank: Question[] = []
+  let round = 0
+  while (bank.length < targetSize) {
+    for (const topic of topics) {
+      if (bank.length >= targetSize) break
+      bank.push(buildQuestion(topic, round))
+    }
+    round += 1
+  }
+  return bank
+}
+
+export const enrichedQuestions: Question[] = buildQuestionBank(5000)

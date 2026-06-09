@@ -73,10 +73,8 @@ export function generateWeekPlan(snapshot: LearningSnapshot, weekStart = getWeek
   const topics = relevantTopics(snapshot)
   const decks = relevantDecks(snapshot)
   const verbs = relevantVerbs(snapshot)
-  const readings = [...curatedReadingExercises, ...snapshot.generatedReadings].filter((exercise) =>
-    isLevelRelevant(exercise.level, snapshot.settings.currentLevel),
-  )
-  const writings = curatedWritingPrompts.filter((prompt) => isLevelRelevant(prompt.level, snapshot.settings.currentLevel))
+  const readings = relevantReadings(snapshot)
+  const writings = relevantWritings(snapshot)
   const weekStartDate = new Date(`${weekStart}T00:00:00`)
   const days = dayKeys.map((day) => {
     const date = new Date(weekStartDate)
@@ -315,6 +313,14 @@ function injectWeeklyReview(days: PlannedDay[]) {
 }
 
 function relevantTopics(snapshot: LearningSnapshot) {
+  const exactCandidates = snapshot.topics
+    .filter((topic) => topic.level === snapshot.settings.currentLevel)
+    .sort((a, b) => a.confidence - b.confidence || (a.sequence ?? 999) - (b.sequence ?? 999))
+  const exactUnlocked = exactCandidates.filter((topic) => topicUnlocked(topic, snapshot.topics))
+  if (exactUnlocked.length || exactCandidates.length) {
+    return (exactUnlocked.length ? exactUnlocked : exactCandidates).slice(0, 30)
+  }
+
   const levels = levelWindow(snapshot.settings.currentLevel)
   const candidates = snapshot.topics
     .filter((topic) => levels.includes(topic.level) && topic.level !== 'B2')
@@ -324,11 +330,19 @@ function relevantTopics(snapshot: LearningSnapshot) {
 }
 
 function relevantDecks(snapshot: LearningSnapshot) {
+  const exactDecks = snapshot.decks.filter((deck) => deck.level === snapshot.settings.currentLevel)
+  if (exactDecks.length) return exactDecks
   const levels = levelWindow(snapshot.settings.currentLevel)
   return snapshot.decks.filter((deck) => levels.includes(deck.level) && deck.level !== 'B2')
 }
 
 function relevantVerbs(snapshot: LearningSnapshot) {
+  const exactVerbs = snapshot.verbs
+    .filter((verb) => verb.level === snapshot.settings.currentLevel)
+    .sort((a, b) => average(Object.values(a.mastery)) - average(Object.values(b.mastery)))
+    .slice(0, 50)
+  if (exactVerbs.length) return exactVerbs
+
   const levels = levelWindow(snapshot.settings.currentLevel)
   return snapshot.verbs
     .filter((verb) => levels.includes(verb.level) && verb.level !== 'B2')
@@ -337,9 +351,19 @@ function relevantVerbs(snapshot: LearningSnapshot) {
 }
 
 function relevantReadings(snapshot: LearningSnapshot) {
+  const exactReadings = [...curatedReadingExercises, ...snapshot.generatedReadings].filter((exercise) =>
+    exercise.level === snapshot.settings.currentLevel,
+  )
+  if (exactReadings.length) return exactReadings
   return [...curatedReadingExercises, ...snapshot.generatedReadings].filter((exercise) =>
     isLevelRelevant(exercise.level, snapshot.settings.currentLevel),
   )
+}
+
+function relevantWritings(snapshot: LearningSnapshot) {
+  const exactWritings = curatedWritingPrompts.filter((prompt) => prompt.level === snapshot.settings.currentLevel)
+  if (exactWritings.length) return exactWritings
+  return curatedWritingPrompts.filter((prompt) => isLevelRelevant(prompt.level, snapshot.settings.currentLevel))
 }
 
 function selectDueDeck(snapshot: LearningSnapshot, decks: VocabDeck[], date: string) {

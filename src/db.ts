@@ -148,6 +148,13 @@ export async function updateSettings(settings: UserSettings) {
   await db.settings.put(settings)
 }
 
+export async function saveDeckWithCards(deck: VocabDeck, cards: VocabCard[]) {
+  await db.transaction('rw', db.decks, db.cards, async () => {
+    await db.decks.put(deck)
+    if (cards.length) await db.cards.bulkPut(cards)
+  })
+}
+
 export async function logAttempt(attempt: Omit<AttemptLog, 'id' | 'createdAt'>) {
   await db.attempts.add({ ...attempt, createdAt: new Date().toISOString() })
 }

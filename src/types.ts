@@ -150,6 +150,7 @@ export interface UserSettings {
   aiProvider: AiProvider
   aiModel: string
   ollamaHost: string
+  ollamaTimeoutMs: number
   // Kept for migration from the original project.
   weeklyStudyHours?: number
   studyDaysPerWeek?: number
@@ -280,6 +281,7 @@ export interface AiConfig {
   provider: AiProvider
   model: string
   host: string
+  timeoutMs: number
 }
 
 export interface AiReadingRequest {

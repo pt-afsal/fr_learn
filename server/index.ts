@@ -15,6 +15,7 @@ app.use(express.json({ limit: '2mb' }))
 const aiConfigSchema = z.object({
   host: z.string().url().default('http://localhost:11434'),
   model: z.string().min(1).default('gemma4:e2b-it-q4_K_M'),
+  timeoutMs: z.number().int().min(1000).max(1800000).default(600000),
 })
 
 const levelSchema = z.enum(['A1', 'A2', 'B1'])
@@ -119,9 +120,9 @@ app.post('/api/ai/explain', async (req, res) => {
   const parsed = bodySchema.safeParse(req.body)
   if (!parsed.success) return validationError(res, parsed.error)
   try {
-    const { host, model, level, topic, lesson, language } = parsed.data
+    const { host, model, timeoutMs, level, topic, lesson, language } = parsed.data
     const prompt = `You are a careful French teacher. Explain the following French grammar lesson for a ${level} learner. Use ${language === 'en' ? 'simple English' : 'simple French'} for explanations. Keep French examples natural and appropriate for ${level}. Do not introduce advanced exceptions unless necessary.\n\nTopic: ${topic}\nLesson: ${lesson}\n\nReturn a concise explanation, 2-5 examples, common mistakes, and a short mini quiz.`
-    const output = await callOllama({ host, model }, prompt, jsonSchemaForExplanation)
+    const output = await callOllama({ host, model, timeoutMs }, prompt, jsonSchemaForExplanation)
     res.json(explanationSchema.parse(output))
   } catch (error) {
     sendAiError(res, error)
@@ -137,12 +138,12 @@ app.post('/api/ai/generate-reading', async (req, res) => {
   const parsed = bodySchema.safeParse(req.body)
   if (!parsed.success) return validationError(res, parsed.error)
   try {
-    const { host, model, level, topic, grammarFocus } = parsed.data
+    const { host, model, timeoutMs, level, topic, grammarFocus } = parsed.data
     const length = level === 'A1' ? '60-100' : level === 'A2' ? '110-180' : '190-280'
     const count = level === 'A1' ? 3 : 4
     const id = `ai-${level.toLowerCase()}-${Date.now()}`
     const prompt = `Create one original French reading-comprehension exercise for a ${level} learner.\nTopic: ${topic}.\nTarget passage length: ${length} words.\n${grammarFocus ? `Use this grammar naturally where appropriate: ${grammarFocus}.` : ''}\nCreate exactly ${count} multiple-choice questions. Each correctAnswer must exactly equal one item in its choices array. Explanations should be short and helpful. Keep all passage and question text in French. Vocabulary meanings can be in English. Use this exact id: ${id}. Set estimatedMinutes appropriately. Return JSON only.`
-    const output = await callOllama({ host, model }, prompt, jsonSchemaForReading)
+    const output = await callOllama({ host, model, timeoutMs }, prompt, jsonSchemaForReading)
     const exercise = readingSchema.parse(output)
     if (exercise.questions.some((question) => !question.choices.includes(question.correctAnswer))) {
       throw new Error('The generated reading exercise contained an invalid answer choice. Generate another exercise or try a different model.')
@@ -163,9 +164,9 @@ app.post('/api/ai/evaluate-writing', async (req, res) => {
   const parsed = bodySchema.safeParse(req.body)
   if (!parsed.success) return validationError(res, parsed.error)
   try {
-    const { host, model, level, task, checklist, text } = parsed.data
+    const { host, model, timeoutMs, level, task, checklist, text } = parsed.data
     const prompt = `You are a supportive French writing teacher evaluating a ${level} learner. Correct the student's response without rewriting it into advanced French. Preserve the student's meaning and keep corrections appropriate for ${level}. Score each category from 0 to 10. Mention at most six important mistakes. Give short explanations in English. Provide up to four rewrite-practice sentences.\n\nTask: ${task}\nChecklist: ${checklist.join('; ')}\nStudent text:\n${text}`
-    const output = await callOllama({ host, model }, prompt, jsonSchemaForWriting)
+    const output = await callOllama({ host, model, timeoutMs }, prompt, jsonSchemaForWriting)
     res.json(writingEvaluationSchema.parse(output))
   } catch (error) {
     sendAiError(res, error)
@@ -181,9 +182,9 @@ app.post('/api/ai/generate-practice', async (req, res) => {
   const parsed = bodySchema.safeParse(req.body)
   if (!parsed.success) return validationError(res, parsed.error)
   try {
-    const { host, model, level, kind, focus } = parsed.data
+    const { host, model, timeoutMs, level, kind, focus } = parsed.data
     const prompt = `Create a short ${kind} practice set for a French learner at ${level}. Focus: ${focus}. Create 5 questions. Keep explanations in simple English. When using choices, ensure the correct answer exactly matches one choice. Return JSON only.`
-    const output = await callOllama({ host, model }, prompt, jsonSchemaForPractice)
+    const output = await callOllama({ host, model, timeoutMs }, prompt, jsonSchemaForPractice)
     res.json(practiceSchema.parse(output))
   } catch (error) {
     sendAiError(res, error)
@@ -198,9 +199,9 @@ app.post('/api/ai/pronunciation-feedback', async (req, res) => {
   const parsed = bodySchema.safeParse(req.body)
   if (!parsed.success) return validationError(res, parsed.error)
   try {
-    const { host, model, expectedText, recognizedText } = parsed.data
+    const { host, model, timeoutMs, expectedText, recognizedText } = parsed.data
     const prompt = `A French learner read a sentence aloud. Speech-to-text returned a transcription. Compare the expected and recognized texts. Explain likely pronunciation areas to practise, while clearly noting that transcription comparison is only an approximation and not a phonetic diagnosis. Give practical advice in English.\nExpected: ${expectedText}\nRecognized: ${recognizedText}`
-    const output = await callOllama({ host, model }, prompt, jsonSchemaForPronunciation)
+    const output = await callOllama({ host, model, timeoutMs }, prompt, jsonSchemaForPronunciation)
     res.json(pronunciationSchema.parse(output))
   } catch (error) {
     sendAiError(res, error)
@@ -236,7 +237,7 @@ async function callOllama(
       format,
       options: { temperature: 0.3 },
     }),
-    signal: AbortSignal.timeout(120000),
+    signal: AbortSignal.timeout(config.timeoutMs),
   })
   if (!response.ok) {
     const detail = await response.text()

@@ -28,8 +28,8 @@ export interface AiStatus {
   selectedModelAvailable: boolean
 }
 
-export function aiConfigFromSettings(settings: { aiProvider: 'disabled' | 'ollama'; aiModel: string; ollamaHost: string }): AiConfig {
-  return { provider: settings.aiProvider, model: settings.aiModel, host: settings.ollamaHost }
+export function aiConfigFromSettings(settings: { aiProvider: 'disabled' | 'ollama'; aiModel: string; ollamaHost: string; ollamaTimeoutMs: number }): AiConfig {
+  return { provider: settings.aiProvider, model: settings.aiModel, host: settings.ollamaHost, timeoutMs: settings.ollamaTimeoutMs }
 }
 
 export async function testAi(config: AiConfig) {
