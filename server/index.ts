@@ -13,9 +13,12 @@ app.use(cors({ origin: true }))
 app.use(express.json({ limit: '2mb' }))
 
 const aiConfigSchema = z.object({
-  host: z.string().url().default('http://localhost:11434'),
+  provider: z.enum(['ollama', 'groq', 'gemini', 'disabled']).default('ollama'),
   model: z.string().min(1).default('gemma4:e2b-it-q4_K_M'),
-  timeoutMs: z.number().int().min(1000).max(1800000).default(600000),
+  host: z.string().url().optional().default('http://localhost:11434'),
+  timeoutMs: z.number().int().min(1000).max(1800000).optional().default(600000),
+  groqApiKey: z.string().optional().default(''),
+  geminiApiKey: z.string().optional().default(''),
 })
 
 const levelSchema = z.enum(['A1', 'A2', 'B1'])
@@ -77,19 +80,45 @@ const pronunciationSchema = z.object({
 })
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, service: 'French Path local server' })
+  res.json({ ok: true, service: 'Flâneur local server' })
 })
 
 app.post('/api/ai/status', async (req, res) => {
   const parsed = aiConfigSchema.safeParse(req.body)
   if (!parsed.success) return validationError(res, parsed.error)
   try {
-    const host = validateHost(parsed.data.host)
-    const response = await fetch(`${host}/api/tags`, { signal: AbortSignal.timeout(8000) })
-    if (!response.ok) throw new Error(`Ollama returned HTTP ${response.status}`)
-    const result = await response.json() as { models?: Array<{ name?: string; model?: string }> }
-    const models = (result.models ?? []).map((item) => item.name ?? item.model).filter(Boolean)
-    res.json({ ok: true, models, selectedModelAvailable: models.includes(parsed.data.model) })
+    const { provider, host, model, groqApiKey, geminiApiKey } = parsed.data
+    if (provider === 'groq') {
+      if (!groqApiKey || !groqApiKey.trim()) {
+        return res.json({ ok: false, models: [], selectedModelAvailable: false, error: 'Groq API Key is not set.' })
+      }
+      const response = await fetch('https://api.groq.com/openai/v1/models', {
+        headers: { 'Authorization': `Bearer ${groqApiKey.trim()}` },
+        signal: AbortSignal.timeout(8000)
+      })
+      if (!response.ok) throw new Error(`Groq returned HTTP ${response.status}`)
+      const data = await response.json() as { data?: Array<{ id: string }> }
+      const models = (data.data ?? []).map((item) => item.id)
+      res.json({ ok: true, models, selectedModelAvailable: models.includes(model) })
+    } else if (provider === 'gemini') {
+      if (!geminiApiKey || !geminiApiKey.trim()) {
+        return res.json({ ok: false, models: [], selectedModelAvailable: false, error: 'Gemini API Key is not set.' })
+      }
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiApiKey.trim()}`, {
+        signal: AbortSignal.timeout(8000)
+      })
+      if (!response.ok) throw new Error(`Gemini returned HTTP ${response.status}`)
+      const data = await response.json() as { models?: Array<{ name: string }> }
+      const models = (data.models ?? []).map((item) => item.name.replace(/^models\//, ''))
+      res.json({ ok: true, models, selectedModelAvailable: models.includes(model) })
+    } else {
+      const targetHost = validateHost(host ?? 'http://localhost:11434')
+      const response = await fetch(`${targetHost}/api/tags`, { signal: AbortSignal.timeout(8000) })
+      if (!response.ok) throw new Error(`Ollama returned HTTP ${response.status}`)
+      const result = await response.json() as { models?: Array<{ name?: string; model?: string }> }
+      const models = (result.models ?? []).map((item) => item.name ?? item.model).filter(Boolean)
+      res.json({ ok: true, models, selectedModelAvailable: models.includes(model) })
+    }
   } catch (error) {
     sendAiError(res, error)
   }
@@ -99,7 +128,7 @@ app.post('/api/ai/test', async (req, res) => {
   const parsed = aiConfigSchema.safeParse(req.body)
   if (!parsed.success) return validationError(res, parsed.error)
   try {
-    const output = await callOllama(parsed.data, 'Reply with a friendly one-sentence confirmation that the local French-learning assistant is ready.', {
+    const output = await callAi(parsed.data, 'Reply with a friendly one-sentence confirmation that the local French-learning assistant is ready.', {
       type: 'object',
       properties: { message: { type: 'string' } },
       required: ['message'],
@@ -120,9 +149,9 @@ app.post('/api/ai/explain', async (req, res) => {
   const parsed = bodySchema.safeParse(req.body)
   if (!parsed.success) return validationError(res, parsed.error)
   try {
-    const { host, model, timeoutMs, level, topic, lesson, language } = parsed.data
+    const { level, topic, lesson, language } = parsed.data
     const prompt = `You are a careful French teacher. Explain the following French grammar lesson for a ${level} learner. Use ${language === 'en' ? 'simple English' : 'simple French'} for explanations. Keep French examples natural and appropriate for ${level}. Do not introduce advanced exceptions unless necessary.\n\nTopic: ${topic}\nLesson: ${lesson}\n\nReturn a concise explanation, 2-5 examples, common mistakes, and a short mini quiz.`
-    const output = await callOllama({ host, model, timeoutMs }, prompt, jsonSchemaForExplanation)
+    const output = await callAi(parsed.data, prompt, jsonSchemaForExplanation)
     res.json(explanationSchema.parse(output))
   } catch (error) {
     sendAiError(res, error)
@@ -138,12 +167,12 @@ app.post('/api/ai/generate-reading', async (req, res) => {
   const parsed = bodySchema.safeParse(req.body)
   if (!parsed.success) return validationError(res, parsed.error)
   try {
-    const { host, model, timeoutMs, level, topic, grammarFocus } = parsed.data
+    const { level, topic, grammarFocus } = parsed.data
     const length = level === 'A1' ? '60-100' : level === 'A2' ? '110-180' : '190-280'
     const count = level === 'A1' ? 3 : 4
     const id = `ai-${level.toLowerCase()}-${Date.now()}`
     const prompt = `Create one original French reading-comprehension exercise for a ${level} learner.\nTopic: ${topic}.\nTarget passage length: ${length} words.\n${grammarFocus ? `Use this grammar naturally where appropriate: ${grammarFocus}.` : ''}\nCreate exactly ${count} multiple-choice questions. Each correctAnswer must exactly equal one item in its choices array. Explanations should be short and helpful. Keep all passage and question text in French. Vocabulary meanings can be in English. Use this exact id: ${id}. Set estimatedMinutes appropriately. Return JSON only.`
-    const output = await callOllama({ host, model, timeoutMs }, prompt, jsonSchemaForReading)
+    const output = await callAi(parsed.data, prompt, jsonSchemaForReading)
     const exercise = readingSchema.parse(output)
     if (exercise.questions.some((question) => !question.choices.includes(question.correctAnswer))) {
       throw new Error('The generated reading exercise contained an invalid answer choice. Generate another exercise or try a different model.')
@@ -164,9 +193,9 @@ app.post('/api/ai/evaluate-writing', async (req, res) => {
   const parsed = bodySchema.safeParse(req.body)
   if (!parsed.success) return validationError(res, parsed.error)
   try {
-    const { host, model, timeoutMs, level, task, checklist, text } = parsed.data
+    const { level, task, checklist, text } = parsed.data
     const prompt = `You are a supportive French writing teacher evaluating a ${level} learner. Correct the student's response without rewriting it into advanced French. Preserve the student's meaning and keep corrections appropriate for ${level}. Score each category from 0 to 10. Mention at most six important mistakes. Give short explanations in English. Provide up to four rewrite-practice sentences.\n\nTask: ${task}\nChecklist: ${checklist.join('; ')}\nStudent text:\n${text}`
-    const output = await callOllama({ host, model, timeoutMs }, prompt, jsonSchemaForWriting)
+    const output = await callAi(parsed.data, prompt, jsonSchemaForWriting)
     res.json(writingEvaluationSchema.parse(output))
   } catch (error) {
     sendAiError(res, error)
@@ -182,9 +211,9 @@ app.post('/api/ai/generate-practice', async (req, res) => {
   const parsed = bodySchema.safeParse(req.body)
   if (!parsed.success) return validationError(res, parsed.error)
   try {
-    const { host, model, timeoutMs, level, kind, focus } = parsed.data
+    const { level, kind, focus } = parsed.data
     const prompt = `Create a short ${kind} practice set for a French learner at ${level}. Focus: ${focus}. Create 5 questions. Keep explanations in simple English. When using choices, ensure the correct answer exactly matches one choice. Return JSON only.`
-    const output = await callOllama({ host, model, timeoutMs }, prompt, jsonSchemaForPractice)
+    const output = await callAi(parsed.data, prompt, jsonSchemaForPractice)
     res.json(practiceSchema.parse(output))
   } catch (error) {
     sendAiError(res, error)
@@ -199,9 +228,9 @@ app.post('/api/ai/pronunciation-feedback', async (req, res) => {
   const parsed = bodySchema.safeParse(req.body)
   if (!parsed.success) return validationError(res, parsed.error)
   try {
-    const { host, model, timeoutMs, expectedText, recognizedText } = parsed.data
+    const { expectedText, recognizedText } = parsed.data
     const prompt = `A French learner read a sentence aloud. Speech-to-text returned a transcription. Compare the expected and recognized texts. Explain likely pronunciation areas to practise, while clearly noting that transcription comparison is only an approximation and not a phonetic diagnosis. Give practical advice in English.\nExpected: ${expectedText}\nRecognized: ${recognizedText}`
-    const output = await callOllama({ host, model, timeoutMs }, prompt, jsonSchemaForPronunciation)
+    const output = await callAi(parsed.data, prompt, jsonSchemaForPronunciation)
     res.json(pronunciationSchema.parse(output))
   } catch (error) {
     sendAiError(res, error)
@@ -217,27 +246,95 @@ app.use((_req, res) => {
 })
 
 app.listen(port, () => {
-  console.log(`French Path server listening on http://localhost:${port}`)
+  console.log(`Flâneur server listening on http://localhost:${port}`)
 })
 
-async function callOllama(
+async function callAi(
   config: z.infer<typeof aiConfigSchema>,
   prompt: string,
   format: Record<string, unknown>,
-) {
-  const host = validateHost(config.host)
-  const response = await fetch(`${host}/api/generate`, {
+): Promise<unknown> {
+  const { provider, model, host, timeoutMs, groqApiKey, geminiApiKey } = config
+
+  if (provider === 'groq') {
+    if (!groqApiKey || !groqApiKey.trim()) {
+      throw new Error('Groq API Key is not configured. Please set it in Settings.')
+    }
+    const finalPrompt = `${prompt}\n\nYou MUST respond with valid JSON matching this schema:\n${JSON.stringify(format, null, 2)}`
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${groqApiKey.trim()}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: finalPrompt }],
+        temperature: 0.3,
+        response_format: { type: 'json_object' },
+      }),
+      signal: AbortSignal.timeout(timeoutMs ?? 60000),
+    })
+    if (!response.ok) {
+      const detail = await response.text()
+      throw new Error(`Groq returned HTTP ${response.status}: ${detail.slice(0, 300)}`)
+    }
+    const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> }
+    const content = data.choices?.[0]?.message?.content
+    if (!content) throw new Error('Groq returned an empty response.')
+    try {
+      return JSON.parse(content)
+    } catch {
+      throw new Error('The Groq model response was not valid JSON. Try again or select another model.')
+    }
+  }
+
+  if (provider === 'gemini') {
+    if (!geminiApiKey || !geminiApiKey.trim()) {
+      throw new Error('Gemini API Key is not configured. Please set it in Settings.')
+    }
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey.trim()}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: format,
+          temperature: 0.3,
+        },
+      }),
+      signal: AbortSignal.timeout(timeoutMs ?? 60000),
+    })
+    if (!response.ok) {
+      const detail = await response.text()
+      throw new Error(`Gemini returned HTTP ${response.status}: ${detail.slice(0, 300)}`)
+    }
+    const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text
+    if (!content) throw new Error('Gemini returned an empty response.')
+    try {
+      return JSON.parse(content)
+    } catch {
+      throw new Error('The Gemini model response was not valid JSON. Try again or select another model.')
+    }
+  }
+
+  const finalHost = validateHost(host ?? 'http://localhost:11434')
+  const response = await fetch(`${finalHost}/api/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: config.model,
+      model,
       prompt,
       stream: false,
       think: false,
       format,
       options: { temperature: 0.3 },
     }),
-    signal: AbortSignal.timeout(config.timeoutMs),
+    signal: AbortSignal.timeout(timeoutMs ?? 600000),
   })
   if (!response.ok) {
     const detail = await response.text()
@@ -268,9 +365,10 @@ function validationError(res: Response, error: z.ZodError) {
 
 function sendAiError(res: Response, error: unknown) {
   const rawMessage = error instanceof Error ? error.message : 'Unknown AI error.'
-  const message = rawMessage === 'fetch failed'
-    ? 'Could not reach Ollama. Start Ollama locally, confirm the host address, and check that the selected model is installed.'
-    : rawMessage
+  let message = rawMessage
+  if (rawMessage === 'fetch failed') {
+    message = 'Network request failed. Please check your internet connection or local settings.'
+  }
   res.status(502).json({ ok: false, error: message })
 }
 

@@ -97,7 +97,7 @@ export async function seedDatabase() {
     currentLevel: (existing.currentLevel as string) === 'B2' ? 'B1' : existing.currentLevel,
     targetLevel: (existing.targetLevel as string) === 'B2' ? 'B1-mastery' : existing.targetLevel,
     weeklyAvailability: migratedAvailability,
-    aiProvider: existing.aiProvider === 'ollama' ? 'ollama' : 'disabled',
+    aiProvider: ['ollama', 'groq', 'gemini'].includes(existing.aiProvider) ? existing.aiProvider : 'disabled',
   }
   await db.settings.put(migrated)
 }

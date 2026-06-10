@@ -7,6 +7,7 @@ import type {
   LearningLevel,
   ReadingExercise,
   WritingEvaluation,
+  UserSettings,
 } from '../types'
 
 export interface AiExplanation {
@@ -28,8 +29,15 @@ export interface AiStatus {
   selectedModelAvailable: boolean
 }
 
-export function aiConfigFromSettings(settings: { aiProvider: 'disabled' | 'ollama'; aiModel: string; ollamaHost: string; ollamaTimeoutMs: number }): AiConfig {
-  return { provider: settings.aiProvider, model: settings.aiModel, host: settings.ollamaHost, timeoutMs: settings.ollamaTimeoutMs }
+export function aiConfigFromSettings(settings: UserSettings): AiConfig {
+  return {
+    provider: settings.aiProvider,
+    model: settings.aiProvider === 'groq' ? settings.groqModel : settings.aiProvider === 'gemini' ? settings.geminiModel : settings.aiModel,
+    host: settings.ollamaHost,
+    timeoutMs: settings.ollamaTimeoutMs,
+    groqApiKey: settings.groqApiKey,
+    geminiApiKey: settings.geminiApiKey,
+  }
 }
 
 export async function testAi(config: AiConfig) {
@@ -89,5 +97,5 @@ async function post<T>(url: string, body: unknown): Promise<T> {
 }
 
 function assertEnabled(config: AiConfig) {
-  if (config.provider !== 'ollama') throw new Error('Enable Ollama in Settings before using an AI activity.')
+  if (config.provider === 'disabled') throw new Error('Enable an AI provider in Settings before using an AI activity.')
 }

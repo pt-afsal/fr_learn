@@ -9,12 +9,12 @@ if [ ! -d node_modules ]; then
   echo "Installing dependencies..."
   npm install
 fi
-echo "Building French Path..."
+echo "Building Flâneur..."
 npm run build
 if command -v open >/dev/null 2>&1; then
   open http://localhost:8787 || true
 elif command -v xdg-open >/dev/null 2>&1; then
   xdg-open http://localhost:8787 >/dev/null 2>&1 || true
 fi
-echo "Starting French Path at http://localhost:8787"
+echo "Starting Flâneur at http://localhost:8787"
 npm start

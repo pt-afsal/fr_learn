@@ -12,11 +12,11 @@ if not exist node_modules (
   call npm install
   if errorlevel 1 goto :error
 )
-echo Building French Path...
+echo Building Flâneur...
 call npm run build
 if errorlevel 1 goto :error
 start "" http://localhost:8787
-echo Starting French Path at http://localhost:8787
+echo Starting Flâneur at http://localhost:8787
 call npm start
 exit /b 0
 :error

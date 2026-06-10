@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import {
   completeTask,
   exportSnapshot,
@@ -67,14 +67,14 @@ import type {
   WritingAttempt,
   WritingEvaluation,
   WritingPrompt,
+  AiProvider,
 } from './types'
 import { dayKeys } from './types'
 import './App.css'
 
 type IconName = 'calendar' | 'map' | 'book' | 'target' | 'chart' | 'settings' | 'lesson' | 'quiz' | 'cards' | 'verb' | 'reading' | 'writing' | 'mic' | 'review' | 'check' | 'flag'
 
-const navItems: Array<{ id: 'today' | 'plan' | 'learn' | 'practice' | 'progress' | 'settings'; label: string; icon: IconName }> = [
-  { id: 'today', label: 'Today', icon: 'calendar' },
+const navItems: Array<{ id: 'plan' | 'learn' | 'practice' | 'progress' | 'settings'; label: string; icon: IconName }> = [
   { id: 'plan', label: 'My plan', icon: 'map' },
   { id: 'learn', label: 'Learn', icon: 'book' },
   { id: 'practice', label: 'Practice', icon: 'target' },
@@ -107,7 +107,7 @@ type WorkspaceRequest = { type: ActivityType; contentId?: string; task?: Planned
 
 export default function App() {
   const [snapshot, setSnapshot] = useState<LearningSnapshot | null>(null)
-  const [activeView, setActiveView] = useState<(typeof navItems)[number]['id']>('today')
+  const [activeView, setActiveView] = useState<(typeof navItems)[number]['id']>('plan')
   const [workspace, setWorkspace] = useState<WorkspaceRequest | null>(null)
   const [notice, setNotice] = useState('')
 
@@ -138,11 +138,10 @@ export default function App() {
       <Sidebar active={activeView} settings={snapshot.settings} onNavigate={setActiveView} />
       <main className="main-area">
         <header className="mobile-header">
-          <strong>French Path</strong>
+          <strong>Flâneur</strong>
         </header>
         {notice && <Notice text={notice} onClose={() => setNotice('')} />}
-        {activeView === 'today' && <TodayView snapshot={snapshot} plan={weekPlan} today={today} completed={completedIds} onOpen={(task) => setWorkspace({ type: task.type, contentId: task.contentId, task })} />}
-        {activeView === 'plan' && <PlanView snapshot={snapshot} plan={weekPlan} completed={completedIds} onSave={saveSettings} onOpen={(task) => setWorkspace({ type: task.type, contentId: task.contentId, task })} />}
+        {activeView === 'plan' && <PlanView snapshot={snapshot} plan={weekPlan} today={today} completed={completedIds} onSave={saveSettings} onOpen={(task) => setWorkspace({ type: task.type, contentId: task.contentId, task })} />}
         {activeView === 'learn' && <LearnView snapshot={snapshot} onRefresh={refresh} onOpen={(type, contentId) => setWorkspace({ type, contentId })} />}
         {activeView === 'practice' && <PracticeView snapshot={snapshot} onRefresh={refresh} onOpen={(type, contentId) => setWorkspace({ type, contentId })} />}
         {activeView === 'progress' && <ProgressView snapshot={snapshot} plan={weekPlan} />}
@@ -155,12 +154,12 @@ export default function App() {
 }
 
 function LoadingScreen() {
-  return <div className="center-screen"><div className="loader-card"><span className="spinner" /> <strong>Loading French Path...</strong></div></div>
+  return <div className="center-screen"><div className="loader-card"><span className="spinner" /> <strong>Loading Flâneur...</strong></div></div>
 }
 
 function Sidebar({ active, settings, onNavigate }: { active: string; settings: UserSettings; onNavigate: (id: (typeof navItems)[number]['id']) => void }) {
   return <aside className="sidebar">
-    <div className="brand"><div className="brand-mark"><AppIcon name="flag" /></div><div><strong>French Path</strong><span>Local learning companion</span></div></div>
+    <div className="brand"><div className="brand-mark"><AppIcon name="flag" /></div><div><strong>Flâneur</strong></div></div>
     <nav>{navItems.map((item) => <button key={item.id} className={`nav-button ${active === item.id ? 'active' : ''}`} onClick={() => onNavigate(item.id)}><span><AppIcon name={item.icon} /></span>{item.label}</button>)}</nav>
     <div className="sidebar-footer"><span className="level-pill">{settings.currentLevel} to {settings.targetLevel}</span><small>{formatMinutes(settingsWeeklyMinutes(settings))} planned weekly</small></div>
   </aside>
@@ -213,7 +212,7 @@ function Onboarding({ initial, onComplete }: { initial: UserSettings; onComplete
   if (placementOpen) return <PlacementTest onCancel={() => setPlacementOpen(false)} onResult={(currentLevel) => { setSettings({ ...settings, currentLevel, targetLevel: targetForLevel(currentLevel) }); setPlacementOpen(false); setStep(2) }} />
   return <div className="onboarding-shell">
     <div className="onboarding-card">
-      <div className="onboarding-brand"><div className="brand-mark large"><AppIcon name="flag" /></div><div><h1>Build your French path</h1><p>A focused plan for consistent progress from A1 to B1.</p></div></div>
+      <div className="onboarding-brand"><div className="brand-mark large"><AppIcon name="flag" /></div><div><h1>Flâneur</h1><p>A focused plan for consistent progress from A1 to B1.</p></div></div>
       <div className="stepper"><span className={step >= 1 ? 'done' : ''}>1</span><i /><span className={step >= 2 ? 'done' : ''}>2</span><i /><span className={step >= 3 ? 'done' : ''}>3</span></div>
       {step === 1 && <section>
         <h2>Where should your plan begin?</h2><p className="muted">Choose the level you believe matches your current French. You can change it later.</p>
@@ -231,8 +230,29 @@ function Onboarding({ initial, onComplete }: { initial: UserSettings; onComplete
         <label className="field"><span>Explanation language</span><select value={settings.languageMode} onChange={(event) => setSettings({ ...settings, languageMode: event.target.value as 'en' | 'fr' })}><option value="en">English</option><option value="fr">French</option></select></label>
         <Toggle label="Enable audio playback" checked={settings.speechEnabled} onChange={(speechEnabled) => setSettings({ ...settings, speechEnabled })} />
         <Toggle label="Enable browser speech recognition" checked={settings.speechRecognitionEnabled} onChange={(speechRecognitionEnabled) => setSettings({ ...settings, speechRecognitionEnabled })} />
-        <Toggle label="Enable local Ollama assistant" checked={settings.aiProvider === 'ollama'} onChange={(enabled) => setSettings({ ...settings, aiProvider: enabled ? 'ollama' : 'disabled' })} />
-        {settings.aiProvider === 'ollama' && <label className="field"><span>Ollama model tag</span><input value={settings.aiModel} onChange={(event) => setSettings({ ...settings, aiModel: event.target.value })} /></label>}
+        <label className="field"><span>AI integration</span>
+          <select value={settings.aiProvider} onChange={(event) => setSettings({ ...settings, aiProvider: event.target.value as AiProvider })}>
+            <option value="disabled">Disabled</option>
+            <option value="ollama">Ollama (Local)</option>
+            <option value="groq">Groq API</option>
+            <option value="gemini">Gemini API</option>
+          </select>
+        </label>
+        {settings.aiProvider === 'ollama' && (
+          <label className="field"><span>Ollama model tag</span><input value={settings.aiModel} onChange={(event) => setSettings({ ...settings, aiModel: event.target.value })} /></label>
+        )}
+        {settings.aiProvider === 'groq' && (
+          <>
+            <label className="field"><span>Groq API Key</span><input type="password" value={settings.groqApiKey} onChange={(event) => setSettings({ ...settings, groqApiKey: event.target.value })} placeholder="gsk_..." /></label>
+            <label className="field"><span>Groq model tag</span><input value={settings.groqModel} onChange={(event) => setSettings({ ...settings, groqModel: event.target.value })} /></label>
+          </>
+        )}
+        {settings.aiProvider === 'gemini' && (
+          <>
+            <label className="field"><span>Gemini API Key</span><input type="password" value={settings.geminiApiKey} onChange={(event) => setSettings({ ...settings, geminiApiKey: event.target.value })} placeholder="AIzaSy..." /></label>
+            <label className="field"><span>Gemini model tag</span><input value={settings.geminiModel} onChange={(event) => setSettings({ ...settings, geminiModel: event.target.value })} /></label>
+          </>
+        )}
       </section>}
       <footer className="wizard-footer">{step > 1 ? <button className="secondary-button" onClick={() => setStep(step - 1)}>Back</button> : <span />}{step < 3 ? <button className="primary-button" onClick={() => setStep(step + 1)}>Continue</button> : <button className="primary-button" disabled={weeklyMinutes === 0} onClick={finish}>Create my plan</button>}</footer>
     </div>
@@ -269,7 +289,7 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
   return <label className="toggle-row"><span>{label}</span><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} /></label>
 }
 
-function PageHeader({ eyebrow, title, action }: { eyebrow?: string; title: string; description?: string; action?: ReactNode }) {
+function PageHeader({ eyebrow, title, action }: { eyebrow?: string; title: string; action?: ReactNode }) {
   return <div className="page-header"><div>{eyebrow && <small>{eyebrow}</small>}<h1>{title}</h1></div>{action}</div>
 }
 
@@ -327,40 +347,44 @@ function GrammarTopicContent({ topic, language, speechEnabled, compact = false }
   </div>
 }
 
-function TodayView({ snapshot, plan, today, completed, onOpen }: { snapshot: LearningSnapshot; plan: WeekPlan; today: string; completed: Set<string>; onOpen: (task: PlannedTask) => void }) {
-  const day = plan.days.find((item) => item.date === today) ?? plan.days[0]
-  const completedCount = day.tasks.filter((task) => completed.has(task.id)).length
-  const firstPending = day.tasks.find((task) => !completed.has(task.id))
-  const name = snapshot.settings.learnerName ? `, ${snapshot.settings.learnerName}` : ''
-  return <>
-    <PageHeader eyebrow={`${snapshot.settings.currentLevel} -> ${snapshot.settings.targetLevel}`} title={`Bonjour${name}`} description="Your study plan adapts to the time you set aside and the skills that need attention." />
-    <section className="hero-card"><div><span className="eyebrow">Today · {dayLabels[day.day]}</span><h2>{day.availableMinutes ? 'Your focused French session' : 'Rest day'}</h2><p>{day.availableMinutes ? `${completedCount} of ${day.tasks.length} activities completed · ${formatMinutes(day.availableMinutes)} planned` : 'No study session is planned today. A rest day helps you maintain a realistic routine.'}</p>{firstPending && <button className="primary-button" onClick={() => onOpen(firstPending)}>Start next activity</button>}</div><ProgressRing value={day.tasks.length ? Math.round((completedCount / day.tasks.length) * 100) : 100} /></section>
-    <div className="section-heading"><div><h2>Today's activities</h2></div></div>
-    {day.tasks.length ? <div className="task-list">{day.tasks.map((task, index) => <TaskRow key={task.id} task={task} index={index} completed={completed.has(task.id)} onOpen={() => onOpen(task)} />)}</div> : <EmptyState title="Nothing scheduled today" description="Open My plan to add study time for this day, or use Practice for an optional exercise." />}
-    <div className="two-column-grid stats-grid"><StatCard label="Vocabulary cards due" value={String(snapshot.cards.filter((card) => new Date(card.dueAt).getTime() <= Date.now()).length)} detail="Spaced repetition queue" /><StatCard label="Offline reading sets" value={String(curatedReadingExercises.length)} detail="Available without Ollama" /><StatCard label="Recent writing attempts" value={String(snapshot.writingAttempts.length)} detail="Saved locally" /><StatCard label="Study time this week" value={formatMinutes(plan.totalMinutes)} detail="Based on your schedule" /></div>
-  </>
-}
-
-function TaskRow({ task, index, completed, onOpen }: { task: PlannedTask; index: number; completed: boolean; onOpen: () => void }) {
-  const meta = activityMeta[task.type]
-  return <article className={`task-row ${completed ? 'completed' : ''}`}><div className="task-index">{completed ? <AppIcon name="check" /> : index + 1}</div><div className="task-icon"><AppIcon name={meta.icon} /></div><div className="task-copy"><h3>{task.title}</h3><p>{task.detail}</p></div><span className="time-pill">{formatMinutes(task.estimatedMinutes)}</span><button className={completed ? 'secondary-button compact' : 'primary-button compact'} onClick={onOpen}>{completed ? 'Repeat' : 'Start'}</button></article>
-}
-
-function PlanView({ snapshot, plan, completed, onSave, onOpen }: { snapshot: LearningSnapshot; plan: WeekPlan; completed: Set<string>; onSave: (settings: UserSettings) => Promise<void>; onOpen: (task: PlannedTask) => void }) {
+function PlanView({ snapshot, plan, completed, onSave, onOpen, today }: { snapshot: LearningSnapshot; plan: WeekPlan; completed: Set<string>; onSave: (settings: UserSettings) => Promise<void>; onOpen: (task: PlannedTask) => void; today: string }) {
   const [editing, setEditing] = useState(false)
   const [availability, setAvailability] = useState(snapshot.settings.weeklyAvailability)
   const save = async () => { await onSave({ ...snapshot.settings, weeklyAvailability: availability }); setEditing(false) }
+
+  const todayCardRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (todayCardRef.current) {
+      todayCardRef.current.scrollIntoView({
+        behavior: 'auto',
+        block: 'nearest',
+        inline: 'center'
+      })
+    }
+  }, [today])
+
   return <>
-    <PageHeader eyebrow={`Week of ${plan.weekStart}`} title="My weekly plan" description="Your schedule is generated from your availability, review queue, weak topics, and current level." action={<button className="secondary-button" onClick={() => setEditing(!editing)}>{editing ? 'Close editor' : 'Edit availability'}</button>} />
+    <PageHeader eyebrow={`Week of ${plan.weekStart}`} title="My weekly plan" action={<button className="secondary-button" onClick={() => setEditing(!editing)}>{editing ? 'Close editor' : 'Edit availability'}</button>} />
     {editing && <section className="panel"><h2>Weekly availability</h2><AvailabilityEditor value={availability} onChange={setAvailability} /><div className="button-row"><button className="primary-button" onClick={() => void save()}>Save and regenerate plan</button></div></section>}
-    <div className="week-grid">{plan.days.map((day) => <section className="day-card" key={day.day}><header><div><strong>{dayLabels[day.day]}</strong><small>{day.date}</small></div><span>{day.availableMinutes ? formatMinutes(day.availableMinutes) : 'Rest'}</span></header>{day.tasks.length ? <div className="mini-task-list">{day.tasks.map((task) => <button key={task.id} className={completed.has(task.id) ? 'done' : ''} onClick={() => onOpen(task)}><span>{completed.has(task.id) ? <AppIcon name="check" /> : <AppIcon name={activityMeta[task.type].icon} />}</span><i>{task.title}</i><small>{task.estimatedMinutes}m</small></button>)}</div> : <p className="muted">Rest day</p>}</section>)}</div>
+    <div className="week-grid">{plan.days.map((day) => {
+      const isToday = day.date === today
+      return <section className={`day-card ${isToday ? 'today' : ''}`} key={day.day} ref={isToday ? todayCardRef : undefined}><header><div><strong>{dayLabels[day.day]}{isToday && <span className="today-badge">Today</span>}</strong><small>{day.date}</small></div><span>{day.availableMinutes ? formatMinutes(day.availableMinutes) : 'Rest'}</span></header>{day.tasks.length ? <div className="mini-task-list">{day.tasks.map((task) => <button key={task.id} className={completed.has(task.id) ? 'done' : ''} onClick={() => onOpen(task)}><span>{completed.has(task.id) ? <AppIcon name="check" /> : <AppIcon name={activityMeta[task.type].icon} />}</span><i>{task.title}</i><small>{task.estimatedMinutes}m</small></button>)}</div> : <p className="muted">Rest day</p>}</section>
+    })}</div>
+    <div className="section-heading"><div><h2>Weekly performance & stats</h2></div></div>
+    <div className="two-column-grid stats-grid">
+      <StatCard label="Vocabulary cards due" value={String(snapshot.cards.filter((card) => new Date(card.dueAt).getTime() <= Date.now()).length)} detail="Spaced repetition queue" />
+      <StatCard label="Offline reading sets" value={String(curatedReadingExercises.length)} detail="Available without Ollama" />
+      <StatCard label="Recent writing attempts" value={String(snapshot.writingAttempts.length)} detail="Saved locally" />
+      <StatCard label="Study time this week" value={formatMinutes(plan.totalMinutes)} detail="Based on your schedule" />
+    </div>
   </>
 }
 
 function LearnView({ snapshot, onRefresh, onOpen }: { snapshot: LearningSnapshot; onRefresh: () => Promise<void>; onOpen: (type: ActivityType, contentId?: string) => void }) {
   const [tab, setTab] = useState<'grammar' | 'vocabulary' | 'verbs'>('grammar')
   return <>
-    <PageHeader title="Learn" description="Browse the curriculum when you want to revise a specific lesson outside the daily session." />
+    <PageHeader title="Learn" />
     <div className="tab-bar">{(['grammar', 'vocabulary', 'verbs'] as const).map((item) => <button className={tab === item ? 'active' : ''} onClick={() => setTab(item)} key={item}>{item === 'verbs' ? 'Verbs' : capitalize(item)}</button>)}</div>
     {tab === 'grammar' && <GrammarLibrary snapshot={snapshot} onRefresh={onRefresh} onOpen={onOpen} />}
     {tab === 'vocabulary' && <VocabularyLibrary snapshot={snapshot} onRefresh={onRefresh} onOpen={onOpen} />}
@@ -380,7 +404,7 @@ function GrammarLibrary({ snapshot, onOpen }: { snapshot: LearningSnapshot; onRe
     setLoading(true); setError(''); setAiExplanation(null)
     try { setAiExplanation(await explainGrammar(aiConfigFromSettings(snapshot.settings), { level: snapshot.settings.currentLevel, topic: selected.titleEn, lesson: selected.explanationEn, language: snapshot.settings.languageMode })) } catch (reason) { setError(errorMessage(reason)) } finally { setLoading(false) }
   }
-  return <div className="library-layout"><aside className="library-list">{(['A1', 'A2', 'B1'] as LearningLevel[]).map((level) => <div key={level}><h3>{level}</h3>{topics.filter((topic) => topic.level === level).map((topic) => <button className={selected?.id === topic.id ? 'selected' : ''} key={topic.id} onClick={() => { setSelectedId(topic.id); setAiExplanation(null) }}><span>{topic.titleFr}</span><small>{topic.titleEn}</small></button>)}</div>)}</aside>{selected && <section className="lesson-panel grammar-lesson-panel"><GrammarTopicContent topic={selected} language={snapshot.settings.languageMode} speechEnabled={snapshot.settings.speechEnabled} /><div className="confidence-line"><span>Confidence</span><Meter value={selected.confidence} /></div><div className="button-row"><button className="primary-button" onClick={() => onOpen('grammar-practice', selected.id)}>Quiz</button><button className="secondary-button" disabled={loading || snapshot.settings.aiProvider !== 'ollama'} onClick={() => void requestExplanation()}>{loading ? 'Generating...' : 'Ollama explain'}</button></div>{error && <ErrorBox text={error} />}{aiExplanation && <div className="ai-box"><h3>Local AI explanation</h3><p>{aiExplanation.explanation}</p><ul>{aiExplanation.examples.map((example) => <li key={example}>{example}</li>)}</ul>{aiExplanation.commonMistakes.length > 0 && <><h4>Common mistakes</h4><ul>{aiExplanation.commonMistakes.map((item) => <li key={item}>{item}</li>)}</ul></>}</div>}</section>}</div>
+  return <div className="library-layout"><aside className="library-list">{(['A1', 'A2', 'B1'] as LearningLevel[]).map((level) => <div key={level}><h3>{level}</h3>{topics.filter((topic) => topic.level === level).map((topic) => <button className={selected?.id === topic.id ? 'selected' : ''} key={topic.id} onClick={() => { setSelectedId(topic.id); setAiExplanation(null) }}><span>{topic.titleFr}</span><small>{topic.titleEn}</small></button>)}</div>)}</aside>{selected && <section className="lesson-panel grammar-lesson-panel"><GrammarTopicContent topic={selected} language={snapshot.settings.languageMode} speechEnabled={snapshot.settings.speechEnabled} /><div className="confidence-line"><span>Confidence</span><Meter value={selected.confidence} /></div><div className="button-row"><button className="primary-button" onClick={() => onOpen('grammar-practice', selected.id)}>Quiz</button><button className="secondary-button" disabled={loading || snapshot.settings.aiProvider === 'disabled'} onClick={() => void requestExplanation()}>{loading ? 'Generating...' : 'AI explain'}</button></div>{error && <ErrorBox text={error} />}{aiExplanation && <div className="ai-box"><h3>Local AI explanation</h3><p>{aiExplanation.explanation}</p><ul>{aiExplanation.examples.map((example) => <li key={example}>{example}</li>)}</ul>{aiExplanation.commonMistakes.length > 0 && <><h4>Common mistakes</h4><ul>{aiExplanation.commonMistakes.map((item) => <li key={item}>{item}</li>)}</ul></>}</div>}</section>}</div>
 }
 
 function VocabularyLibrary({ snapshot, onRefresh, onOpen }: { snapshot: LearningSnapshot; onRefresh: () => Promise<void>; onOpen: (type: ActivityType, contentId?: string) => void }) {
@@ -392,7 +416,7 @@ function VocabularyLibrary({ snapshot, onRefresh, onOpen }: { snapshot: Learning
   const [showBuilder, setShowBuilder] = useState(false)
   const deck = decks.find((item) => item.id === selectedId) ?? decks[0]
   const cards = snapshot.cards.filter((card) => card.deckId === deck?.id)
-  return <div className="library-layout"><aside className="library-list"><div className="library-list-header"><h3>Decks</h3><button className="secondary-button compact" onClick={() => setShowBuilder((current) => !current)}>{showBuilder ? 'Close' : 'New set'}</button></div>{decks.map((item) => <button className={item.id === deck?.id ? 'selected' : ''} onClick={() => setSelectedId(item.id)} key={item.id}><span>{item.title}</span><small>{item.level}</small></button>)}</aside><section className="lesson-panel">{showBuilder && <VocabSetBuilder currentLevel={snapshot.settings.currentLevel} onCreated={async (deckId) => { await onRefresh(); setSelectedId(deckId); setShowBuilder(false) }} />}{deck && <><div className="split-header"><div><span className="eyebrow">{deck.level} vocabulary {deck.source === 'personal' ? '· personal set' : ''}</span><h2>{deck.title}</h2><p>{deck.description}</p></div><div className="button-row"><button className="primary-button" onClick={() => onOpen('vocabulary-review', deck.id)}>Study this set</button></div></div><div className="summary-strip"><strong>{cards.length} cards</strong><span>{cards.filter((card) => new Date(card.dueAt).getTime() <= Date.now()).length} due now</span></div>{deck.tags.length > 0 && <div className="pill-row">{deck.tags.map((tag) => <span key={tag} className="tag-pill">{tag}</span>)}</div>}<div className="word-grid">{cards.slice(0, 60).map((card) => <article key={card.id}><strong>{card.frontFr}</strong><span>{card.backEn}</span><small>{card.exampleFr}</small></article>)}</div></>}</section></div>
+  return <div className="library-layout"><aside className="library-list"><div className="library-list-header"><h3>Decks</h3><button className="secondary-button compact" onClick={() => setShowBuilder((current) => !current)}>{showBuilder ? 'Close' : 'New set'}</button></div>{decks.map((item) => <button className={item.id === deck?.id ? 'selected' : ''} onClick={() => setSelectedId(item.id)} key={item.id}><span>{item.title}</span><small>{item.level}</small></button>)}</aside><section className="lesson-panel">{showBuilder && <VocabSetBuilder currentLevel={snapshot.settings.currentLevel} onCreated={async (deckId) => { await onRefresh(); setSelectedId(deckId); setShowBuilder(false) }} />}{deck && <><div className="split-header"><div><span className="eyebrow">{deck.level} vocabulary {deck.source === 'personal' ? '· personal set' : ''}</span><h2>{deck.title}</h2></div><div className="button-row"><button className="primary-button" onClick={() => onOpen('vocabulary-review', deck.id)}>Study</button></div></div><div className="summary-strip"><strong>{cards.length} cards</strong><span>{cards.filter((card) => new Date(card.dueAt).getTime() <= Date.now()).length} due now</span></div>{deck.tags.length > 0 && <div className="pill-row">{deck.tags.map((tag) => <span key={tag} className="tag-pill">{tag}</span>)}</div>}<div className="word-grid">{cards.slice(0, 60).map((card) => <article key={card.id}><strong>{card.frontFr}</strong><span>{card.backEn}</span><small>{card.exampleFr}</small></article>)}</div></>}</section></div>
 }
 
 function VerbLibrary({ snapshot, onOpen }: { snapshot: LearningSnapshot; onOpen: (type: ActivityType, contentId?: string) => void }) {
@@ -426,9 +450,9 @@ function PracticeView({ snapshot, onRefresh, onOpen }: { snapshot: LearningSnaps
     { type: 'pronunciation', title: 'Pronunciation' },
   ]
   return <>
-    <PageHeader title="Practice" description="Choose an exercise directly, or use Ollama to create new practice material locally." />
+    <PageHeader title="Practice" />
     <div className="practice-grid">{cards.map((card) => <button className="practice-card" key={card.type} onClick={() => onOpen(card.type)}><span><AppIcon name={activityMeta[card.type].icon} /></span><h3>{card.title}</h3><i>Start</i></button>)}</div>
-    <section className="panel ai-studio"><div><h2>AI studio</h2></div><div className="ai-studio-grid"><label className="field"><span>Reading topic</span><input value={topic} onChange={(event) => setTopic(event.target.value)} /></label><label className="field"><span>Focus</span><input value={focus} onChange={(event) => setFocus(event.target.value)} /></label><button className="primary-button" disabled={loading !== '' || snapshot.settings.aiProvider !== 'ollama'} onClick={() => void createReading()}>{loading === 'reading' ? 'Generating...' : 'Generate reading'}</button></div><hr /><div className="ai-studio-grid"><label className="field"><span>Type</span><select value={kind} onChange={(event) => setKind(event.target.value as typeof kind)}><option value="grammar">Grammar</option><option value="vocabulary">Vocabulary</option><option value="conjugation">Conjugation</option></select></label><label className="field"><span>Focus</span><input value={focus} onChange={(event) => setFocus(event.target.value)} /></label><button className="secondary-button" disabled={loading !== '' || snapshot.settings.aiProvider !== 'ollama'} onClick={() => void createPractice()}>{loading === 'practice' ? 'Generating...' : 'Generate practice'}</button></div>{error && <ErrorBox text={error} />}{generatedPractice && <div className="ai-box"><h3>{generatedPractice.title}</h3><p>{generatedPractice.instructions}</p><ol>{generatedPractice.questions.map((question, index) => <li key={`${question.prompt}-${index}`}><strong>{question.prompt}</strong><small>Answer: {question.correctAnswer} · {question.explanation}</small></li>)}</ol></div>}</section>
+    <section className="panel ai-studio"><div><h2>AI studio</h2></div><div className="ai-studio-grid"><label className="field"><span>Reading topic</span><input value={topic} onChange={(event) => setTopic(event.target.value)} /></label><label className="field"><span>Focus</span><input value={focus} onChange={(event) => setFocus(event.target.value)} /></label><button className="primary-button" disabled={loading !== '' || snapshot.settings.aiProvider === 'disabled'} onClick={() => void createReading()}>{loading === 'reading' ? 'Generating...' : 'Generate reading'}</button></div><hr /><div className="ai-studio-grid"><label className="field"><span>Type</span><select value={kind} onChange={(event) => setKind(event.target.value as typeof kind)}><option value="grammar">Grammar</option><option value="vocabulary">Vocabulary</option><option value="conjugation">Conjugation</option></select></label><label className="field"><span>Focus</span><input value={focus} onChange={(event) => setFocus(event.target.value)} /></label><button className="secondary-button" disabled={loading !== '' || snapshot.settings.aiProvider === 'disabled'} onClick={() => void createPractice()}>{loading === 'practice' ? 'Generating...' : 'Generate practice'}</button></div>{error && <ErrorBox text={error} />}{generatedPractice && <div className="ai-box"><h3>{generatedPractice.title}</h3><p>{generatedPractice.instructions}</p><ol>{generatedPractice.questions.map((question, index) => <li key={`${question.prompt}-${index}`}><strong>{question.prompt}</strong><small>Answer: {question.correctAnswer} · {question.explanation}</small></li>)}</ol></div>}</section>
   </>
 }
 
@@ -439,7 +463,7 @@ function ProgressView({ snapshot, plan }: { snapshot: LearningSnapshot; plan: We
   const totalPossible = plan.days.flatMap((day) => day.tasks).length
   const writingAverage = snapshot.writingAttempts.flatMap((attempt) => attempt.feedback ? [average(Object.values(attempt.feedback.scores))] : [])
   return <>
-    <PageHeader title="Progress" description="Progress is calculated from saved local activity, not placeholder streaks." />
+    <PageHeader title="Progress" />
     <div className="two-column-grid stats-grid"><StatCard label="Current path" value={`${snapshot.settings.currentLevel} -> ${snapshot.settings.targetLevel}`} detail="Personalised learning objective" /><StatCard label="Tasks completed this week" value={`${completedThisWeek.length}/${totalPossible}`} detail="Across your generated plan" /><StatCard label="Reading attempts" value={String(snapshot.readingAttempts.length)} detail="Saved comprehension results" /><StatCard label="Writing average" value={writingAverage.length ? `${Math.round(average(writingAverage) * 10)}%` : '-'} detail="From Ollama-scored submissions" /></div>
     <div className="two-column-grid"><section className="panel"><h2>Topics needing revision</h2>{weakTopics.map((topic) => <ProgressLine key={topic.id} topic={topic} />)}</section><section className="panel"><h2>Strong topics</h2>{strongTopics.map((topic) => <ProgressLine key={topic.id} topic={topic} />)}</section></div>
     <section className="panel"><h2>Recent activity</h2>{snapshot.taskCompletions.slice(0, 12).length ? <div className="history-list">{snapshot.taskCompletions.slice(0, 12).map((item) => <div key={item.id}><span>OK</span><div><strong>{item.taskId.split('-').slice(3).join(' ')}</strong><small>{new Date(item.completedAt).toLocaleString()}</small></div>{item.score !== undefined && <b>{Math.round(item.score)}%</b>}</div>)}</div> : <p className="muted">Complete your first activity to start the history.</p>}</section>
@@ -451,13 +475,31 @@ function SettingsView({ snapshot, onSave, onRefresh, onNotice }: { snapshot: Lea
   const [status, setStatus] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const save = async () => { await onSave({ ...draft, targetLevel: targetForLevel(draft.currentLevel) }); onNotice('Settings saved. Your plan has been regenerated.') }
-  const checkAi = async (test = false) => { setStatus('Checking local Ollama...'); try { if (test) { const result = await testAi(aiConfigFromSettings(draft)); setStatus(result.message) } else { const result = await getAiStatus(aiConfigFromSettings(draft)); setStatus(`Connected. ${result.models.length} local model(s) detected.${result.selectedModelAvailable ? ' Selected model is available.' : ' Pull or select the configured model.'}`) } } catch (reason) { setStatus(errorMessage(reason)) } }
+  const checkAi = async (test = false) => {
+    const providerLabel = draft.aiProvider === 'ollama' ? 'Ollama' : draft.aiProvider === 'groq' ? 'Groq' : draft.aiProvider === 'gemini' ? 'Gemini' : 'AI'
+    setStatus(`Checking ${providerLabel} connection...`)
+    try {
+      if (test) {
+        const result = await testAi(aiConfigFromSettings(draft))
+        setStatus(result.message)
+      } else {
+        const result = await getAiStatus(aiConfigFromSettings(draft))
+        if (draft.aiProvider === 'ollama') {
+          setStatus(`Connected. ${result.models.length} local model(s) detected.${result.selectedModelAvailable ? ' Selected model is available.' : ' Pull or select the configured model.'}`)
+        } else {
+          setStatus(`Connected to ${providerLabel} API. Selected model is available.`)
+        }
+      }
+    } catch (reason) {
+      setStatus(errorMessage(reason))
+    }
+  }
   const downloadBackup = async () => { const data = await exportSnapshot(); downloadJson(data, `french-path-backup-${toDateKey(new Date())}.json`) }
   const importBackup = async (event: ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (!file) return; try { await importSnapshot(JSON.parse(await file.text()) as LearningSnapshot); await onRefresh(); onNotice('Backup imported successfully.') } catch { onNotice('The selected backup could not be imported.') } finally { event.target.value = '' } }
   const performReset = async () => { if (!window.confirm('Reset saved progress and return to onboarding?')) return; await resetProgress(); await onRefresh() }
   return <>
-    <PageHeader title="Settings" description="All learning progress stays in your browser. Ollama requests go through the bundled local server." action={<button className="primary-button" onClick={() => void save()}>Save settings</button>} />
-    <div className="two-column-grid"><section className="panel"><h2>Profile</h2><label className="field"><span>Name</span><input value={draft.learnerName} onChange={(event) => setDraft({ ...draft, learnerName: event.target.value })} /></label><label className="field"><span>Current level</span><select value={draft.currentLevel} onChange={(event) => { const currentLevel = event.target.value as LearningLevel; setDraft({ ...draft, currentLevel, targetLevel: targetForLevel(currentLevel) }) }}><option>A1</option><option>A2</option><option>B1</option></select></label><label className="field"><span>Target</span><input disabled value={draft.targetLevel} /></label><label className="field"><span>Explanation language</span><select value={draft.languageMode} onChange={(event) => setDraft({ ...draft, languageMode: event.target.value as 'en' | 'fr' })}><option value="en">English</option><option value="fr">French</option></select></label><Toggle label="Audio playback" checked={draft.speechEnabled} onChange={(speechEnabled) => setDraft({ ...draft, speechEnabled })} /><Toggle label="Speech recognition" checked={draft.speechRecognitionEnabled} onChange={(speechRecognitionEnabled) => setDraft({ ...draft, speechRecognitionEnabled })} /></section><section className="panel"><h2>Local Ollama assistant</h2><Toggle label="Enable Ollama integration" checked={draft.aiProvider === 'ollama'} onChange={(enabled) => setDraft({ ...draft, aiProvider: enabled ? 'ollama' : 'disabled' })} /><label className="field"><span>Ollama host</span><input value={draft.ollamaHost} onChange={(event) => setDraft({ ...draft, ollamaHost: event.target.value })} /></label><label className="field"><span>Model tag</span><input value={draft.aiModel} onChange={(event) => setDraft({ ...draft, aiModel: event.target.value })} /></label><label className="field"><span>Ollama timeout <small>(minutes)</small></span><input type="number" min={1} max={30} value={Math.round(draft.ollamaTimeoutMs / 60000)} onChange={(event) => setDraft({ ...draft, ollamaTimeoutMs: Math.max(1, Math.min(30, Number(event.target.value) || 10)) * 60000 })} /><small>Default is 10 minutes for long local generations.</small></label><div className="button-row"><button className="secondary-button" disabled={draft.aiProvider !== 'ollama'} onClick={() => void checkAi(false)}>Check connection</button><button className="secondary-button" disabled={draft.aiProvider !== 'ollama'} onClick={() => void checkAi(true)}>Send test prompt</button></div>{status && <p className="status-box">{status}</p>}</section></div>
+    <PageHeader title="Settings" action={<button className="primary-button" onClick={() => void save()}>Save settings</button>} />
+    <div className="two-column-grid"><section className="panel"><h2>Profile</h2><label className="field"><span>Name</span><input value={draft.learnerName} onChange={(event) => setDraft({ ...draft, learnerName: event.target.value })} /></label><label className="field"><span>Current level</span><select value={draft.currentLevel} onChange={(event) => { const currentLevel = event.target.value as LearningLevel; setDraft({ ...draft, currentLevel, targetLevel: targetForLevel(currentLevel) }) }}><option>A1</option><option>A2</option><option>B1</option></select></label><label className="field"><span>Target</span><input disabled value={draft.targetLevel} /></label><label className="field"><span>Explanation language</span><select value={draft.languageMode} onChange={(event) => setDraft({ ...draft, languageMode: event.target.value as 'en' | 'fr' })}><option value="en">English</option><option value="fr">French</option></select></label><Toggle label="Audio playback" checked={draft.speechEnabled} onChange={(speechEnabled) => setDraft({ ...draft, speechEnabled })} /><Toggle label="Speech recognition" checked={draft.speechRecognitionEnabled} onChange={(speechRecognitionEnabled) => setDraft({ ...draft, speechRecognitionEnabled })} /></section><section className="panel"><h2>AI Integration</h2><label className="field"><span>AI Provider</span><select value={draft.aiProvider} onChange={(event) => setDraft({ ...draft, aiProvider: event.target.value as AiProvider })}><option value="disabled">Disabled</option><option value="ollama">Ollama (Local)</option><option value="groq">Groq API</option><option value="gemini">Gemini API</option></select></label>{draft.aiProvider === 'ollama' && <><label className="field"><span>Ollama host</span><input value={draft.ollamaHost} onChange={(event) => setDraft({ ...draft, ollamaHost: event.target.value })} /></label><label className="field"><span>Model tag</span><input value={draft.aiModel} onChange={(event) => setDraft({ ...draft, aiModel: event.target.value })} /></label><label className="field"><span>Ollama timeout <small>(minutes)</small></span><input type="number" min={1} max={30} value={Math.round(draft.ollamaTimeoutMs / 60000)} onChange={(event) => setDraft({ ...draft, ollamaTimeoutMs: Math.max(1, Math.min(30, Number(event.target.value) || 10)) * 60000 })} /><small>Default is 10 minutes for long local generations.</small></label></>}{draft.aiProvider === 'groq' && <><label className="field"><span>Groq API Key</span><input type="password" value={draft.groqApiKey} onChange={(event) => setDraft({ ...draft, groqApiKey: event.target.value })} placeholder="gsk_..." /></label><label className="field"><span>Groq model tag</span><input value={draft.groqModel} onChange={(event) => setDraft({ ...draft, groqModel: event.target.value })} /></label></>}{draft.aiProvider === 'gemini' && <><label className="field"><span>Gemini API Key</span><input type="password" value={draft.geminiApiKey} onChange={(event) => setDraft({ ...draft, geminiApiKey: event.target.value })} placeholder="AIzaSy..." /></label><label className="field"><span>Gemini model tag</span><input value={draft.geminiModel} onChange={(event) => setDraft({ ...draft, geminiModel: event.target.value })} /></label></>}<div className="button-row"><button className="secondary-button" disabled={draft.aiProvider === 'disabled'} onClick={() => void checkAi(false)}>Check connection</button><button className="secondary-button" disabled={draft.aiProvider === 'disabled'} onClick={() => void checkAi(true)}>Send test prompt</button></div>{status && <p className="status-box">{status}</p>}</section></div>
     <section className="panel"><h2>Backup and reset</h2><p>Your browser stores progress in IndexedDB. Export a JSON backup before moving to another browser or computer.</p><div className="button-row"><button className="secondary-button" onClick={() => void downloadBackup()}>Export JSON backup</button><button className="secondary-button" onClick={() => fileRef.current?.click()}>Import backup</button><button className="danger-button" onClick={() => void performReset()}>Reset progress</button><input hidden type="file" accept="application/json" ref={fileRef} onChange={(event) => void importBackup(event)} /></div></section>
   </>
 }
@@ -517,7 +559,6 @@ function GrammarPracticeWorkspace({ snapshot, contentId, onDone, onRefresh }: { 
 function VocabSetBuilder({ currentLevel, onCreated }: { currentLevel: LearningLevel; onCreated: (deckId: string) => Promise<void> }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
   const [level, setLevel] = useState<LearningLevel>(currentLevel)
   const [tags, setTags] = useState('personal,imported')
   const [rows, setRows] = useState<ParsedVocabRow[]>([])
@@ -557,67 +598,119 @@ function VocabSetBuilder({ currentLevel, onCreated }: { currentLevel: LearningLe
       setError('Add a set title and at least one vocabulary row before saving.')
       return
     }
-    const deck = createPersonalDeck(title, description, level, splitLooseTags(tags))
+    const deck = createPersonalDeck(title, '', level, splitLooseTags(tags))
     const cards = createPersonalCards(deck.id, rows)
     await saveDeckWithCards(deck, cards)
     await onCreated(deck.id)
     setTitle('')
-    setDescription('')
     setRows([])
     setError('')
   }
 
-  return <section className="builder-panel"><div className="split-header"><div><h3>New set</h3></div><div className="button-row"><button className="secondary-button" onClick={() => fileRef.current?.click()}>Upload CSV</button><input hidden ref={fileRef} type="file" accept=".csv,text/csv" onChange={(event) => void importFile(event)} /></div></div><div className="two-column-grid"><label className="field"><span>Set title</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Week 1 essentials" /></label><label className="field"><span>Level</span><select value={level} onChange={(event) => setLevel(event.target.value as LearningLevel)}><option value="A1">A1</option><option value="A2">A2</option><option value="B1">B1</option></select></label></div><label className="field"><span>Description</span><input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Useful words for work, travel, or a textbook chapter." /></label><label className="field"><span>Tags</span><input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="travel,chapter-2,verbs" /></label><div className="two-column-grid"><label className="field"><span>French term</span><input value={manualFr} onChange={(event) => setManualFr(event.target.value)} /></label><label className="field"><span>English meaning</span><input value={manualEn} onChange={(event) => setManualEn(event.target.value)} /></label></div><div className="button-row"><button className="secondary-button" onClick={addManual}>Add card</button></div><label className="field"><span>CSV</span><textarea rows={6} value={csvText} onChange={(event) => setCsvText(event.target.value)} /></label><div className="button-row"><button className="secondary-button" onClick={importCsv}>Import CSV</button><button className="primary-button" onClick={() => void saveSet()}>Save set</button></div>{error && <ErrorBox text={error} />}{rows.length > 0 && <div className="summary-strip"><strong>{rows.length} cards</strong><span>{rows.slice(0, 3).map((row) => row.frontFr).join(' · ')}</span></div>}</section>
+  return <section className="builder-panel"><div className="split-header"><div><h3>New set</h3></div><div className="button-row"><button className="secondary-button" onClick={() => fileRef.current?.click()}>Upload CSV</button><input hidden ref={fileRef} type="file" accept=".csv,text/csv" onChange={(event) => void importFile(event)} /></div></div><div className="two-column-grid"><label className="field"><span>Set title</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Week 1 essentials" /></label><label className="field"><span>Level</span><select value={level} onChange={(event) => setLevel(event.target.value as LearningLevel)}><option value="A1">A1</option><option value="A2">A2</option><option value="B1">B1</option></select></label></div><label className="field"><span>Tags</span><input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="travel,chapter-2,verbs" /></label><div className="two-column-grid"><label className="field"><span>French term</span><input value={manualFr} onChange={(event) => setManualFr(event.target.value)} /></label><label className="field"><span>English meaning</span><input value={manualEn} onChange={(event) => setManualEn(event.target.value)} /></label></div><div className="button-row"><button className="secondary-button" onClick={addManual}>Add card</button></div><label className="field"><span>CSV</span><textarea rows={6} value={csvText} onChange={(event) => setCsvText(event.target.value)} /></label><div className="button-row"><button className="secondary-button" onClick={importCsv}>Import CSV</button><button className="primary-button" onClick={() => void saveSet()}>Save set</button></div>{error && <ErrorBox text={error} />}{rows.length > 0 && <div className="summary-strip"><strong>{rows.length} cards</strong><span>{rows.slice(0, 3).map((row) => row.frontFr).join(' · ')}</span></div>}</section>
 }
 
 function VocabularyWorkspace({ snapshot, contentId, onDone, onRefresh }: { snapshot: LearningSnapshot; contentId?: string; onDone: (score?: number) => Promise<void>; onRefresh: () => Promise<void> }) {
   const due = snapshot.cards.filter((card) => new Date(card.dueAt).getTime() <= Date.now())
   const sourceCards = contentId ? snapshot.cards.filter((card) => card.deckId === contentId) : due.length ? due : snapshot.cards
   const cards = sourceCards.slice(0, 12)
+  const [sessionCards, setSessionCards] = useState(() => cards)
   const [mode, setMode] = useState<'flashcards' | 'write' | 'match'>('flashcards')
   const [index, setIndex] = useState(0)
   const [revealed, setRevealed] = useState(false)
   const [positive, setPositive] = useState(0)
   const [typedAnswer, setTypedAnswer] = useState('')
   const [typedResult, setTypedResult] = useState<boolean | null>(null)
+  const [writeDirection, setWriteDirection] = useState<'en-to-fr' | 'fr-to-en'>('en-to-fr')
+
+  // Cards mode queue state
+  const [queue, setQueue] = useState<string[]>(() => cards.map((c) => c.id))
+  const [studiedIds, setStudiedIds] = useState<Set<string>>(() => new Set())
+  const [firstAttempts, setFirstAttempts] = useState<Record<string, boolean>>({})
+
+  // Swipe state
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
+  const [swipeOffset, setSwipeOffset] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+
+  // Match mode stable answers list
   const [matchPairs, setMatchPairs] = useState(() => buildMatchPairs(cards, Math.min(6, cards.length)))
+  const [shuffledAnswers, setShuffledAnswers] = useState(() => shuffle(matchPairs.map((pair) => ({ cardId: pair.cardId, answer: pair.answer }))))
   const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
+  const [incorrectPrompt, setIncorrectPrompt] = useState<string | null>(null)
+  const [incorrectAnswer, setIncorrectAnswer] = useState<string | null>(null)
+  const [isMatchLock, setIsMatchLock] = useState(false)
   const [matchedIds, setMatchedIds] = useState<string[]>([])
   const [matchMistakes, setMatchMistakes] = useState(0)
-  const card = cards[index]
+
+  const card = mode === 'flashcards' ? sessionCards.find((c) => c.id === queue[0]) : sessionCards[index]
+  const writeCard = sessionCards[index]
 
   if (!card) return <EmptyState title="No flashcards found" description="There are no cards in this deck." />
 
   const finishWithScore = (value: number) => void onDone(Math.round(value))
+
   const rate = async (rating: 'again' | 'difficult' | 'good' | 'easy') => {
-    await updateCardReview(card.id, rating)
-    const nextPositive = positive + (rating === 'good' || rating === 'easy' ? 1 : 0)
-    if (rating === 'good' || rating === 'easy') setPositive(nextPositive)
+    const cardId = queue[0]
+    if (!cardId) return
+    await updateCardReview(cardId, rating)
     await onRefresh()
-    if (index + 1 >= cards.length) finishWithScore((nextPositive / cards.length) * 100)
-    else { setIndex(index + 1); setRevealed(false) }
+
+    const isCorrect = rating === 'good' || rating === 'easy'
+    const updatedAttempts = { ...firstAttempts }
+    if (!(cardId in firstAttempts)) {
+      updatedAttempts[cardId] = isCorrect
+      setFirstAttempts(updatedAttempts)
+    }
+
+    if (isCorrect) {
+      const nextStudied = new Set(studiedIds)
+      nextStudied.add(cardId)
+      setStudiedIds(nextStudied)
+
+      const nextQueue = queue.filter((id) => id !== cardId)
+      setQueue(nextQueue)
+      setRevealed(false)
+
+      if (nextQueue.length === 0) {
+        const correctCount = Object.keys(updatedAttempts).filter((id) => updatedAttempts[id]).length
+        const score = Math.round((correctCount / sessionCards.length) * 100)
+        finishWithScore(score)
+      }
+    } else {
+      const nextQueue = [...queue.slice(1), cardId]
+      setQueue(nextQueue)
+      setRevealed(false)
+    }
   }
+
   const checkTyped = async () => {
-    const correct = normalizeAnswer(typedAnswer) === normalizeAnswer(card.backEn)
+    const targetAnswer = writeDirection === 'en-to-fr' ? writeCard.frontFr : writeCard.backEn
+    const correct = normalizeAnswer(typedAnswer) === normalizeAnswer(targetAnswer)
     setTypedResult(correct)
-    await updateCardReview(card.id, correct ? 'good' : 'again')
+    await updateCardReview(writeCard.id, correct ? 'good' : 'again')
     await onRefresh()
   }
+
   const nextTyped = () => {
     const nextIndex = index + 1
     const earned = positive + (typedResult ? 1 : 0)
     if (typedResult) setPositive(earned)
-    if (nextIndex >= cards.length) finishWithScore((earned / cards.length) * 100)
+    if (nextIndex >= sessionCards.length) finishWithScore((earned / sessionCards.length) * 100)
     else {
       setIndex(nextIndex)
       setTypedAnswer('')
       setTypedResult(null)
     }
   }
-  const prompts = matchPairs.filter((pair) => !matchedIds.includes(pair.cardId))
-  const answers = useMemo(() => shuffle(prompts.map((pair) => ({ cardId: pair.cardId, answer: pair.answer }))), [prompts])
+
+  const prompts = matchPairs
+  const answers = shuffledAnswers
+
   const pickMatch = async (value: string, type: 'prompt' | 'answer') => {
+    if (isMatchLock) return
+
     const nextPrompt = type === 'prompt' ? value : selectedPrompt
     const nextAnswer = type === 'answer' ? value : selectedAnswer
     if (type === 'prompt') setSelectedPrompt(value)
@@ -628,6 +721,8 @@ function VocabularyWorkspace({ snapshot, contentId, onDone, onRefresh }: { snaps
     if (pair?.answer === nextAnswer) {
       const nextMatched = [...matchedIds, pair.cardId]
       setMatchedIds(nextMatched)
+      setSelectedPrompt(null)
+      setSelectedAnswer(null)
       await updateCardReview(pair.cardId, 'good')
       await onRefresh()
       if (nextMatched.length >= matchPairs.length) {
@@ -636,19 +731,294 @@ function VocabularyWorkspace({ snapshot, contentId, onDone, onRefresh }: { snaps
       }
     } else {
       setMatchMistakes((current) => current + 1)
+      setIncorrectPrompt(nextPrompt)
+      setIncorrectAnswer(nextAnswer)
+      setIsMatchLock(true)
+      setTimeout(() => {
+        setIncorrectPrompt(null)
+        setIncorrectAnswer(null)
+        setSelectedPrompt(null)
+        setSelectedAnswer(null)
+        setIsMatchLock(false)
+      }, 800)
     }
-    setSelectedPrompt(null)
-    setSelectedAnswer(null)
   }
+
   const resetMatch = () => {
-    setMatchPairs(buildMatchPairs(cards, Math.min(6, cards.length)))
+    const nextPairs = buildMatchPairs(sessionCards, Math.min(6, sessionCards.length))
+    setMatchPairs(nextPairs)
+    setShuffledAnswers(shuffle(nextPairs.map((pair) => ({ cardId: pair.cardId, answer: pair.answer }))))
     setMatchedIds([])
     setMatchMistakes(0)
     setSelectedPrompt(null)
     setSelectedAnswer(null)
+    setIncorrectPrompt(null)
+    setIncorrectAnswer(null)
+    setIsMatchLock(false)
   }
 
-  return <div className="exercise study-shell"><div className="study-toolbar"><div className="tab-bar compact-tabs"><button className={mode === 'flashcards' ? 'active' : ''} onClick={() => setMode('flashcards')}>Cards</button><button className={mode === 'write' ? 'active' : ''} onClick={() => setMode('write')}>Write</button><button className={mode === 'match' ? 'active' : ''} onClick={() => { setMode('match'); resetMatch() }}>Match</button></div><span className="study-count">{index + 1}/{cards.length}</span></div>{mode === 'flashcards' && <div className="flashcard-exercise"><button className={`flashcard ${revealed ? 'revealed' : ''}`} onClick={() => setRevealed(true)}><strong>{card.frontFr}</strong>{revealed ? <><b>{card.backEn}</b><span>{card.exampleFr}</span><small>{card.exampleEn}</small></> : null}</button>{revealed && <div className="rating-grid"><button onClick={() => void rate('again')}>Again</button><button onClick={() => void rate('difficult')}>Difficult</button><button onClick={() => void rate('good')}>Good</button><button onClick={() => void rate('easy')}>Easy</button></div>}</div>}{mode === 'write' && <div className="quizlet-panel study-card"><span className="study-count">{index + 1}/{cards.length}</span><h3>{card.frontFr}</h3><p>{card.exampleFr}</p><input value={typedAnswer} disabled={typedResult !== null} onChange={(event) => setTypedAnswer(event.target.value)} placeholder="English meaning" />{typedResult !== null && <Feedback correct={typedResult} answer={card.backEn} explanation={card.exampleEn} />}{typedResult === null ? <button className="primary-button" disabled={!typedAnswer.trim()} onClick={() => void checkTyped()}>Check</button> : <button className="primary-button" onClick={nextTyped}>{index + 1 >= cards.length ? 'Finish' : 'Next'}</button>}</div>}{mode === 'match' && <div className="quizlet-panel study-card"><div className="match-status"><strong>{matchedIds.length}/{matchPairs.length}</strong><span>{matchMistakes}</span></div><div className="match-grid"><div><h4>French</h4><div className="choice-grid">{prompts.map((pair) => <button key={pair.cardId} className={selectedPrompt === pair.prompt ? 'selected' : ''} onClick={() => void pickMatch(pair.prompt, 'prompt')}>{pair.prompt}</button>)}</div></div><div><h4>English</h4><div className="choice-grid">{answers.map((pair) => <button key={pair.cardId} className={selectedAnswer === pair.answer ? 'selected' : ''} onClick={() => void pickMatch(pair.answer, 'answer')}>{pair.answer}</button>)}</div></div></div>{prompts.length === 0 && <div className="result-footer"><strong>Complete</strong><button className="primary-button" onClick={() => finishWithScore(((matchPairs.length - matchMistakes) / matchPairs.length) * 100)}>Finish</button></div>}</div>}</div>
+  const randomiseDeck = () => {
+    const shuffled = shuffle([...sessionCards])
+    setSessionCards(shuffled)
+    setQueue(shuffled.map((c) => c.id))
+    setStudiedIds(new Set())
+    setFirstAttempts({})
+    setRevealed(false)
+    setIndex(0)
+    setPositive(0)
+    // Also reset Match since the base set changed
+    const nextPairs = buildMatchPairs(shuffled, Math.min(6, shuffled.length))
+    setMatchPairs(nextPairs)
+    setShuffledAnswers(shuffle(nextPairs.map((pair) => ({ cardId: pair.cardId, answer: pair.answer }))))
+    setMatchedIds([])
+    setMatchMistakes(0)
+    setSelectedPrompt(null)
+    setSelectedAnswer(null)
+    setIncorrectPrompt(null)
+    setIncorrectAnswer(null)
+    setIsMatchLock(false)
+  }
+
+  useEffect(() => {
+    setSessionCards(cards)
+    setQueue(cards.map((c) => c.id))
+    setStudiedIds(new Set())
+    setFirstAttempts({})
+    setRevealed(false)
+    setIndex(0)
+    setPositive(0)
+    const nextPairs = buildMatchPairs(cards, Math.min(6, cards.length))
+    setMatchPairs(nextPairs)
+    setShuffledAnswers(shuffle(nextPairs.map((pair) => ({ cardId: pair.cardId, answer: pair.answer }))))
+    setMatchedIds([])
+    setMatchMistakes(0)
+    setSelectedPrompt(null)
+    setSelectedAnswer(null)
+    setIncorrectPrompt(null)
+    setIncorrectAnswer(null)
+    setIsMatchLock(false)
+  }, [contentId])
+
+  const handleStart = (clientX: number, clientY: number) => {
+    setDragStart({ x: clientX, y: clientY })
+    setSwipeOffset(0)
+    setIsDragging(false)
+  }
+
+  const handleMove = (clientX: number, clientY: number) => {
+    if (!dragStart) return
+    const diffX = clientX - dragStart.x
+    const diffY = clientY - dragStart.y
+    if (Math.abs(diffX) > 8 || Math.abs(diffY) > 8) {
+      setIsDragging(true)
+    }
+    if (isDragging) {
+      setSwipeOffset(diffX)
+    }
+  }
+
+  const handleEnd = () => {
+    if (!dragStart) return
+    if (isDragging) {
+      if (swipeOffset < -120) {
+        void rate('again')
+      } else if (swipeOffset > 120) {
+        void rate('good')
+      }
+    } else {
+      setRevealed(true)
+    }
+    setDragStart(null)
+    setSwipeOffset(0)
+    setIsDragging(false)
+  }
+
+  const getCardStyle = () => {
+    if (swipeOffset === 0 && !isDragging) return {}
+    const rotate = swipeOffset * 0.08
+    return {
+      transform: `translateX(${swipeOffset}px) rotate(${rotate}deg)`,
+      transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+    }
+  }
+
+  return (
+    <div className="exercise study-shell">
+      <div className="study-toolbar">
+        <div className="tab-bar compact-tabs">
+          <button className={mode === 'flashcards' ? 'active' : ''} onClick={() => setMode('flashcards')}>Cards</button>
+          <button className={mode === 'write' ? 'active' : ''} onClick={() => setMode('write')}>Write</button>
+          <button className={mode === 'match' ? 'active' : ''} onClick={() => { setMode('match'); resetMatch() }}>Match</button>
+        </div>
+        {mode === 'flashcards' && (
+          <button className="secondary-button compact" onClick={randomiseDeck} style={{ marginRight: 'auto', marginLeft: '10px' }}>
+            Randomise
+          </button>
+        )}
+        {mode === 'flashcards' ? (
+          <span className="study-count">
+            Studied: {studiedIds.size} · Remaining: {queue.length} · Total: {sessionCards.length}
+          </span>
+        ) : (
+          <span className="study-count">{index + 1}/{sessionCards.length}</span>
+        )}
+      </div>
+
+      {mode === 'flashcards' && (
+        <div className="flashcard-exercise">
+          <button
+            className={`flashcard ${revealed ? 'revealed' : ''} ${swipeOffset < -30 ? 'swipe-left' : ''} ${swipeOffset > 30 ? 'swipe-right' : ''}`}
+            style={getCardStyle()}
+            onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
+            onMouseMove={(e) => handleMove(e.clientX, e.clientY)}
+            onMouseUp={handleEnd}
+            onMouseLeave={handleEnd}
+            onTouchStart={(e) => {
+              const t = e.touches[0]
+              handleStart(t.clientX, t.clientY)
+            }}
+            onTouchMove={(e) => {
+              const t = e.touches[0]
+              handleMove(t.clientX, t.clientY)
+            }}
+            onTouchEnd={handleEnd}
+          >
+            {swipeOffset < -40 && <div className="swipe-indicator revise">Revise</div>}
+            {swipeOffset > 40 && <div className="swipe-indicator know">Know</div>}
+            <strong>{card.frontFr}</strong>
+            {revealed ? (
+              <>
+                <b>{card.backEn}</b>
+                <span>{card.exampleFr}</span>
+                <small>{card.exampleEn}</small>
+              </>
+            ) : null}
+          </button>
+          {revealed && (
+            <div className="rating-grid">
+              <button onClick={() => void rate('again')}>Again</button>
+              <button onClick={() => void rate('difficult')}>Difficult</button>
+              <button onClick={() => void rate('good')}>Good</button>
+              <button onClick={() => void rate('easy')}>Easy</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {mode === 'write' && (
+        <div className="quizlet-panel study-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="study-count">{index + 1}/{sessionCards.length}</span>
+            <button
+              className="secondary-button compact"
+              onClick={() => setWriteDirection(prev => prev === 'en-to-fr' ? 'fr-to-en' : 'en-to-fr')}
+            >
+              {writeDirection === 'en-to-fr' ? 'English ➔ French' : 'French ➔ English'}
+            </button>
+          </div>
+          <h3>{writeDirection === 'en-to-fr' ? writeCard.backEn : writeCard.frontFr}</h3>
+          <p>{writeDirection === 'en-to-fr' ? writeCard.exampleEn : writeCard.exampleFr}</p>
+          <input
+            value={typedAnswer}
+            disabled={typedResult !== null}
+            onChange={(event) => setTypedAnswer(event.target.value)}
+            placeholder={writeDirection === 'en-to-fr' ? 'French translation' : 'English meaning'}
+            autoFocus
+          />
+          {typedResult !== null && (
+            <Feedback
+              correct={typedResult}
+              answer={writeDirection === 'en-to-fr' ? writeCard.frontFr : writeCard.backEn}
+              explanation={writeDirection === 'en-to-fr' ? writeCard.exampleFr : writeCard.exampleEn}
+            />
+          )}
+          {typedResult === null ? (
+            <button className="primary-button" disabled={!typedAnswer.trim()} onClick={() => void checkTyped()}>
+              Check
+            </button>
+          ) : (
+            <button className="primary-button" onClick={nextTyped}>
+              {index + 1 >= sessionCards.length ? 'Finish' : 'Next'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {mode === 'match' && (
+        <div className="quizlet-panel study-card">
+          <div className="match-status">
+            <strong>{matchedIds.length}/{matchPairs.length}</strong>
+            <span>{matchMistakes}</span>
+          </div>
+          <div className="match-grid">
+            <div>
+              <h4>French</h4>
+              <div className="choice-grid">
+                {prompts.map((pair) => {
+                  const isMatched = matchedIds.includes(pair.cardId)
+                  const isIncorrect = incorrectPrompt === pair.prompt
+                  const isSelected = selectedPrompt === pair.prompt
+
+                  let btnClass = ''
+                  if (isMatched) btnClass = 'matched'
+                  else if (isIncorrect) btnClass = 'incorrect'
+                  else if (isSelected) btnClass = 'selected'
+
+                  return (
+                    <button
+                      key={pair.cardId}
+                      className={btnClass}
+                      disabled={isMatched || isMatchLock}
+                      onClick={() => void pickMatch(pair.prompt, 'prompt')}
+                    >
+                      {pair.prompt}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div>
+              <h4>English</h4>
+              <div className="choice-grid">
+                {answers.map((pair) => {
+                  const isMatched = matchedIds.includes(pair.cardId)
+                  const isIncorrect = incorrectAnswer === pair.answer
+                  const isSelected = selectedAnswer === pair.answer
+
+                  let btnClass = ''
+                  if (isMatched) btnClass = 'matched'
+                  else if (isIncorrect) btnClass = 'incorrect'
+                  else if (isSelected) btnClass = 'selected'
+
+                  return (
+                    <button
+                      key={pair.cardId}
+                      className={btnClass}
+                      disabled={isMatched || isMatchLock}
+                      onClick={() => void pickMatch(pair.answer, 'answer')}
+                    >
+                      {pair.answer}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+          {matchedIds.length === matchPairs.length && (
+            <div className="result-footer">
+              <strong>Complete</strong>
+              <button
+                className="primary-button"
+                onClick={() => finishWithScore(((matchPairs.length - matchMistakes) / matchPairs.length) * 100)}
+              >
+                Finish
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 function ConjugationWorkspace({ snapshot, contentId, onDone, onRefresh }: { snapshot: LearningSnapshot; contentId?: string; onDone: (score?: number) => Promise<void>; onRefresh: () => Promise<void> }) {
   const verbs = contentId ? snapshot.verbs.filter((verb) => verb.id === contentId) : [...snapshot.verbs].filter((verb) => verb.level !== 'B2').sort((a, b) => average(Object.values(a.mastery)) - average(Object.values(b.mastery))).slice(0, 24)
@@ -709,7 +1079,7 @@ function WritingWorkspace({ snapshot, contentId, onDone }: { snapshot: LearningS
   const saveOnly = async () => { const attempt: WritingAttempt = { id: crypto.randomUUID(), promptId: prompt.id, originalText: text, completedAt: new Date().toISOString() }; await saveWritingAttempt(attempt); await onDone() }
   const requestEvaluation = async () => { setLoading(true); setError(''); try { const result = await evaluateWriting(aiConfigFromSettings(snapshot.settings), { level: snapshot.settings.currentLevel, task, checklist, text }); setEvaluation(result); await saveWritingAttempt({ id: crypto.randomUUID(), promptId: prompt.id, originalText: text, correctedText: result.correctedText, feedback: result, completedAt: new Date().toISOString() }) } catch (reason) { setError(errorMessage(reason)) } finally { setLoading(false) } }
   const total = evaluation ? average(Object.values(evaluation.scores)) * 10 : undefined
-  return <div className="exercise"><label className="field inline"><span>Prompt</span><select value={prompt.id} disabled={Boolean(contentId)} onChange={(event) => { setSelectedId(event.target.value); setEvaluation(null); setText('') }}>{prompts.map((item) => <option key={item.id} value={item.id}>{item.level} · {item.title ?? item.titleEn ?? item.id}</option>)}</select></label><span className="eyebrow">{prompt.level} writing</span><h3>{prompt.title ?? prompt.titleEn}</h3><p>{task}</p><ul className="checklist">{checklist.map((item) => <li key={item}>{item}</li>)}</ul><textarea rows={10} value={text} onChange={(event) => setText(event.target.value)} placeholder={prompt.starter ?? prompt.starterSentence ?? 'Start writing in French...'} /><div className="button-row"><button className="secondary-button" disabled={!text.trim()} onClick={() => void saveOnly()}>Save</button><button className="primary-button" disabled={!text.trim() || loading || snapshot.settings.aiProvider !== 'ollama'} onClick={() => void requestEvaluation()}>{loading ? 'Evaluating...' : 'Evaluate'}</button></div>{error && <ErrorBox text={error} />}{evaluation && <div className="ai-box"><h3>Writing feedback · {Math.round(total ?? 0)}%</h3><div className="score-grid">{Object.entries(evaluation.scores).map(([label, value]) => <div key={label}><span>{humanCamel(label)}</span><strong>{value}/10</strong></div>)}</div><h4>Corrected version</h4><p>{evaluation.correctedText}</p><h4>Important corrections</h4><ul>{evaluation.importantMistakes.map((mistake, index) => <li key={`${mistake.original}-${index}`}><strong>{mistake.original}</strong> to {mistake.correction}<small>{mistake.explanation}</small></li>)}</ul><p><strong>Next grammar focus:</strong> {evaluation.recommendedGrammarTopic}</p><button className="primary-button" onClick={() => void onDone(total)}>Finish</button></div>}</div>
+  return <div className="exercise"><label className="field inline"><span>Prompt</span><select value={prompt.id} disabled={Boolean(contentId)} onChange={(event) => { setSelectedId(event.target.value); setEvaluation(null); setText('') }}>{prompts.map((item) => <option key={item.id} value={item.id}>{item.level} · {item.title ?? item.titleEn ?? item.id}</option>)}</select></label><span className="eyebrow">{prompt.level} writing</span><h3>{prompt.title ?? prompt.titleEn}</h3><p>{task}</p><ul className="checklist">{checklist.map((item) => <li key={item}>{item}</li>)}</ul><textarea rows={10} value={text} onChange={(event) => setText(event.target.value)} placeholder={prompt.starter ?? prompt.starterSentence ?? 'Start writing in French...'} /><div className="button-row"><button className="secondary-button" disabled={!text.trim()} onClick={() => void saveOnly()}>Save</button><button className="primary-button" disabled={!text.trim() || loading || snapshot.settings.aiProvider === 'disabled'} onClick={() => void requestEvaluation()}>{loading ? 'Evaluating...' : 'Evaluate'}</button></div>{error && <ErrorBox text={error} />}{evaluation && <div className="ai-box"><h3>Writing feedback · {Math.round(total ?? 0)}%</h3><div className="score-grid">{Object.entries(evaluation.scores).map(([label, value]) => <div key={label}><span>{humanCamel(label)}</span><strong>{value}/10</strong></div>)}</div><h4>Corrected version</h4><p>{evaluation.correctedText}</p><h4>Important corrections</h4><ul>{evaluation.importantMistakes.map((mistake, index) => <li key={`${mistake.original}-${index}`}><strong>{mistake.original}</strong> to {mistake.correction}<small>{mistake.explanation}</small></li>)}</ul><p><strong>Next grammar focus:</strong> {evaluation.recommendedGrammarTopic}</p><button className="primary-button" onClick={() => void onDone(total)}>Finish</button></div>}</div>
 }
 
 function PronunciationWorkspace({ snapshot, expectedText, onDone }: { snapshot: LearningSnapshot; expectedText?: string; onDone: (score?: number) => Promise<void> }) {
@@ -776,7 +1146,7 @@ function PronunciationWorkspace({ snapshot, expectedText, onDone }: { snapshot: 
   }
   const finish = async () => { const attempt: PronunciationAttempt = { id: crypto.randomUUID(), expectedText: expected, recognizedText: recognized, similarity, feedback: feedback?.feedback, completedAt: new Date().toISOString() }; await savePronunciationAttempt(attempt); await onDone(similarity) }
   const askAi = async () => { try { setFeedback(await getPronunciationFeedback(aiConfigFromSettings(snapshot.settings), expected, recognized)) } catch (reason) { setError(errorMessage(reason)) } }
-  return <div className="exercise"><div className="summary-strip"><strong>{promptOptions.length.toLocaleString()} prompts</strong><span>{Math.min(promptIndex + 1, promptOptions.length)}/{promptOptions.length}</span></div><label className="field"><span>Phrase</span><textarea rows={3} value={expected} onChange={(event) => setExpected(event.target.value)} /></label><div className="button-row"><button className="secondary-button" disabled={promptOptions.length <= 1} onClick={() => choosePrompt(promptIndex + 1)}>Next</button><button className="secondary-button" disabled={promptOptions.length <= 1} onClick={() => choosePrompt(Math.floor(Math.random() * promptOptions.length))}>Random</button><SpeakButton text={expected} enabled={snapshot.settings.speechEnabled} label="Listen" /><button className="primary-button" onClick={record}>{listening ? 'Listening...' : 'Record'}</button></div><label className="field"><span>Recognized</span><textarea rows={3} value={recognized} onChange={(event) => setRecognized(event.target.value)} placeholder="Transcription" /></label>{recognized && <div className="summary-strip"><strong>{similarity}%</strong><span>{similarity >= 85 ? 'Very close' : similarity >= 60 ? 'Good start' : 'Repeat'}</span></div>}{error && <ErrorBox text={error} />}<div className="button-row"><button className="secondary-button" disabled={!recognized || snapshot.settings.aiProvider !== 'ollama'} onClick={() => void askAi()}>Ollama advice</button><button className="primary-button" disabled={!recognized} onClick={() => void finish()}>Save</button></div>{feedback && <div className="ai-box"><h3>Pronunciation practice advice</h3><p>{feedback.feedback}</p><h4>Focus words</h4><p>{feedback.focusWords.join(' · ')}</p><h4>Try these phrases</h4><ul>{feedback.practicePhrases.map((phrase) => <li key={phrase}>{phrase}</li>)}</ul></div>}</div>
+  return <div className="exercise"><div className="summary-strip"><strong>{promptOptions.length.toLocaleString()} prompts</strong><span>{Math.min(promptIndex + 1, promptOptions.length)}/{promptOptions.length}</span></div><label className="field"><span>Phrase</span><textarea rows={3} value={expected} onChange={(event) => setExpected(event.target.value)} /></label><div className="button-row"><button className="secondary-button" disabled={promptOptions.length <= 1} onClick={() => choosePrompt(promptIndex + 1)}>Next</button><button className="secondary-button" disabled={promptOptions.length <= 1} onClick={() => choosePrompt(Math.floor(Math.random() * promptOptions.length))}>Random</button><SpeakButton text={expected} enabled={snapshot.settings.speechEnabled} label="Listen" /><button className="primary-button" onClick={record}>{listening ? 'Listening...' : 'Record'}</button></div><label className="field"><span>Recognized</span><textarea rows={3} value={recognized} onChange={(event) => setRecognized(event.target.value)} placeholder="Transcription" /></label>{recognized && <div className="summary-strip"><strong>{similarity}%</strong><span>{similarity >= 85 ? 'Very close' : similarity >= 60 ? 'Good start' : 'Repeat'}</span></div>}{error && <ErrorBox text={error} />}<div className="button-row"><button className="secondary-button" disabled={!recognized || snapshot.settings.aiProvider === 'disabled'} onClick={() => void askAi()}>AI advice</button><button className="primary-button" disabled={!recognized} onClick={() => void finish()}>Save</button></div>{feedback && <div className="ai-box"><h3>Pronunciation practice advice</h3><p>{feedback.feedback}</p><h4>Focus words</h4><p>{feedback.focusWords.join(' · ')}</p><h4>Try these phrases</h4><ul>{feedback.practicePhrases.map((phrase) => <li key={phrase}>{phrase}</li>)}</ul></div>}</div>
 }
 
 function WeeklyReviewWorkspace({ snapshot, onDone }: { snapshot: LearningSnapshot; onDone: (score?: number) => Promise<void> }) {
@@ -801,7 +1171,7 @@ function selectGrammarQuestionSet(questions: LearningSnapshot['questions'], coun
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
     seed = (seed * 1664525 + 1013904223) >>> 0
     const swapIndex = seed % (index + 1)
-    ;[shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]]
+      ;[shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]]
   }
   return shuffled.slice(0, count)
 }

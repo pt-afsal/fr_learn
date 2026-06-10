@@ -74,8 +74,62 @@
 .stat-card span, .stat-card small { color: var(--muted); font-size: 12px; }
 .stat-card strong { font-size: 22px; letter-spacing: 0; }
 .panel { padding: 20px; margin-top: 18px; }
-.week-grid { display: grid; grid-template-columns: repeat(7, minmax(145px, 1fr)); gap: 10px; overflow-x: auto; padding-bottom: 7px; }
-.day-card { padding: 13px; min-width: 145px; }
+.week-grid {
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  gap: 16px;
+  padding: 16px 4px 20px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+.week-grid::-webkit-scrollbar {
+  height: 6px;
+}
+.week-grid::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 999px;
+}
+.week-grid::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
+}
+.week-grid::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+.day-card {
+  flex: 0 0 280px;
+  scroll-snap-align: center;
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 12px;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+.day-card.today {
+  border: 2px solid var(--primary);
+  background: linear-gradient(135deg, #f2f8f7 0%, var(--surface) 100%);
+  box-shadow: 0 8px 24px rgba(30, 97, 91, 0.12);
+  transform: scale(1.02);
+  position: relative;
+  z-index: 1;
+}
+.today-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 800;
+  vertical-align: middle;
+}
 .day-card header { padding-bottom: 10px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 7px; }
 .day-card header strong, .day-card header small { display: block; }
 .day-card header small { margin-top: 3px; color: var(--muted); font-size: 10px; }
@@ -201,8 +255,10 @@ legend { padding: 0 5px; font-weight: 750; font-size: 14px; }
 .example-box { display: grid; gap: 7px; padding: 13px; margin: 16px 0; border-radius: 11px; background: #f4f8f7; }
 .example-box div { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .choice-grid { display: grid; gap: 8px; margin: 14px 0; }
-.choice-grid button { padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: #fff; text-align: left; }
+.choice-grid button { padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: #fff; text-align: left; white-space: normal; word-break: break-word; }
 .choice-grid button.selected { border-color: var(--primary); background: var(--primary-soft); }
+.choice-grid button.matched { border-color: var(--correct) !important; background: var(--correct-soft) !important; color: var(--correct) !important; cursor: default; }
+.choice-grid button.incorrect { border-color: var(--danger) !important; background: var(--danger-soft) !important; color: var(--danger) !important; }
 .grammar-question { margin: 0 0 12px; }
 .inline-answer-line { display: inline; line-height: 1.7; }
 .inline-answer-input {
@@ -218,7 +274,12 @@ legend { padding: 0 5px; font-weight: 750; font-size: 14px; }
 .feedback.incorrect { background: var(--danger-soft); color: var(--danger); }
 .feedback p { margin: 5px 0 0; color: inherit; }
 .flashcard-exercise { text-align: center; }
-.flashcard { min-height: 245px; width: 100%; display: grid; place-content: center; gap: 8px; padding: 30px; border-radius: 8px; border: 1px solid var(--line); background: linear-gradient(135deg, #f8fbfa, #fff7f2); color: var(--ink); }
+.flashcard { position: relative; overflow: hidden; min-height: 245px; width: 100%; display: grid; place-content: center; gap: 8px; padding: 30px; border-radius: 8px; border: 1px solid var(--line); background: linear-gradient(135deg, #f8fbfa, #fff7f2); color: var(--ink); user-select: none; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.3s ease, border-color 0.3s ease; }
+.flashcard.swipe-left { background: var(--danger-soft) !important; border-color: var(--danger) !important; }
+.flashcard.swipe-right { background: var(--correct-soft) !important; border-color: var(--correct) !important; }
+.swipe-indicator { position: absolute; top: 24px; padding: 6px 12px; border: 3px solid; border-radius: 8px; font-size: 24px; font-weight: 900; text-transform: uppercase; z-index: 10; pointer-events: none; }
+.swipe-indicator.revise { right: 24px; color: var(--danger); border-color: var(--danger); transform: rotate(12deg); }
+.swipe-indicator.know { left: 24px; color: var(--correct); border-color: var(--correct); transform: rotate(-12deg); }
 .flashcard strong { color: var(--primary-dark); font-size: 34px; }
 .flashcard b { font-size: 18px; }
 .flashcard span, .flashcard small { color: var(--muted); }
@@ -261,19 +322,14 @@ legend { padding: 0 5px; font-weight: 750; font-size: 14px; }
   .sidebar { display: none; }
   .main-area { padding: 16px 18px 96px; }
   .mobile-header { display: flex; align-items: center; padding: 0 0 18px; }
-  .week-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    overflow-x: visible;
-  }
-  .day-card { min-width: 0; }
+  /* week-grid keeps flex scrolling row on mobile */
   .mobile-nav {
     position: fixed;
     left: 12px;
     right: 12px;
     bottom: 12px;
     z-index: 20;
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    display: flex;
     gap: 8px;
     padding: 10px;
     border: 1px solid var(--line);
@@ -283,6 +339,7 @@ legend { padding: 0 5px; font-weight: 750; font-size: 14px; }
     backdrop-filter: blur(10px);
   }
   .mobile-nav-button {
+    flex: 1;
     border: 0;
     background: transparent;
     color: #526461;
@@ -312,7 +369,7 @@ legend { padding: 0 5px; font-weight: 750; font-size: 14px; }
   .page-header > button { margin-top: 12px; }
   .hero-card { padding: 20px; }
   .progress-ring { width: 83px; height: 83px; }
-  .week-grid { grid-template-columns: 1fr; }
+  /* week-grid keeps flex scrolling row on mobile */
   .task-row { grid-template-columns: 27px 30px 1fr auto; }
   .task-row .time-pill { display: none; }
   .task-copy p { max-width: 180px; }
@@ -344,7 +401,9 @@ legend { padding: 0 5px; font-weight: 750; font-size: 14px; }
   .button-row { margin-top: 12px; }
   .score-grid { grid-template-columns: repeat(2, 1fr); }
   .rating-grid { grid-template-columns: repeat(2, 1fr); }
-  .match-grid { grid-template-columns: 1fr; }
+  .quizlet-panel { padding: 10px; }
+  .match-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .match-grid button { padding: 8px 6px; font-size: 14px; white-space: normal; word-break: break-word; text-align: center; }
   .grammar-guide { gap: 10px; margin-top: 10px; }
   .grammar-guide-grid { grid-template-columns: 1fr; gap: 9px; }
   .grammar-card { padding: 12px; border-radius: 10px; }

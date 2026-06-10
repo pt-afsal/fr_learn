@@ -5,6 +5,9 @@ import { bookB1Questions, bookB1Topics } from './bookB1'
 import { enrichedQuestions } from './enrichedQuiz'
 import { extraCards, extraDecks, extraQuestions, extraTopics } from './expandedSeed'
 import { applyDetailedGrammarTopics } from './grammarDetails'
+import { totem1LexiconCards, totem1LexiconDeck } from './totem1Vocab'
+import { totem2LexiconCards, totem2LexiconDeck } from './totem2Vocab'
+import { totem3LexiconCards, totem3LexiconDeck } from './totem3Vocab'
 import type { Question, SkillTopic, UserSettings, VocabCard, VocabDeck, VerbEntry } from './types'
 
 const today = new Date().toISOString()
@@ -31,6 +34,10 @@ export const defaultSettings: UserSettings = {
   aiModel: 'gemma4:e2b-it-q4_K_M',
   ollamaHost: 'http://localhost:11434',
   ollamaTimeoutMs: 600000,
+  groqApiKey: '',
+  geminiApiKey: '',
+  groqModel: 'llama-3.3-70b-specdec',
+  geminiModel: 'gemini-1.5-flash',
 }
 
 export const seedTopics: SkillTopic[] = [
@@ -635,8 +642,8 @@ for (let index = seedQuestions.length - 1; index >= 0; index -= 1) {
 }
 seedQuestions.push(...curatedA1Questions)
 seedQuestions.push(...completeQuestionSets(seedTopics.filter((topic) => topic.level !== 'A1'), seedQuestions))
-seedDecks.push(...extraDecks)
-seedCards.push(...extraCards)
+seedDecks.push(...extraDecks, totem1LexiconDeck, totem2LexiconDeck, totem3LexiconDeck)
+seedCards.push(...extraCards, ...totem1LexiconCards, ...totem2LexiconCards, ...totem3LexiconCards)
 
 function verb(
   id: string,

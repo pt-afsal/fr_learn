@@ -10,7 +10,7 @@ export type CefrLevel = 'A1' | 'A2' | 'B1' | 'B2'
 export type LearningLevel = Exclude<CefrLevel, 'B2'>
 export type TargetLevel = 'A2' | 'B1' | 'B1-mastery'
 export type LanguageMode = 'en' | 'fr'
-export type AiProvider = 'disabled' | 'ollama'
+export type AiProvider = 'disabled' | 'ollama' | 'groq' | 'gemini'
 export type QuestionType = 'multiple-choice' | 'fill'
 export type DayKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
 export type CoreItemType = 'grammar' | 'vocabulary' | 'conjugation'
@@ -151,6 +151,10 @@ export interface UserSettings {
   aiModel: string
   ollamaHost: string
   ollamaTimeoutMs: number
+  groqApiKey: string
+  geminiApiKey: string
+  groqModel: string
+  geminiModel: string
   // Kept for migration from the original project.
   weeklyStudyHours?: number
   studyDaysPerWeek?: number
@@ -280,8 +284,10 @@ export interface LearningSnapshot {
 export interface AiConfig {
   provider: AiProvider
   model: string
-  host: string
-  timeoutMs: number
+  host?: string
+  timeoutMs?: number
+  groqApiKey?: string
+  geminiApiKey?: string
 }
 
 export interface AiReadingRequest {
