@@ -1,5 +1,6 @@
 import { a2B1QuestionBank, a2B1Topics, completeQuestionSets } from './a2B1Curriculum'
 import { curatedA1Questions } from './a1GrammarQuestions'
+import { curatedA2Questions } from './a2GrammarQuestions'
 import { bookA2Questions, bookA2Topics } from './bookA2'
 import { bookB1Questions, bookB1Topics } from './bookB1'
 import { enrichedQuestions } from './enrichedQuiz'
@@ -637,10 +638,13 @@ applyDetailedGrammarTopics(seedTopics)
 seedQuestions.push(...extraQuestions, ...bookA2Questions, ...bookB1Questions, ...a2B1QuestionBank, ...enrichedQuestions)
 
 const a1TopicIds = new Set(seedTopics.filter((topic) => topic.level === 'A1').map((topic) => topic.id))
+const a2TopicIds = new Set(seedTopics.filter((topic) => topic.level === 'A2').map((topic) => topic.id))
 for (let index = seedQuestions.length - 1; index >= 0; index -= 1) {
   if (a1TopicIds.has(seedQuestions[index].topicId)) seedQuestions.splice(index, 1)
+  else if (a2TopicIds.has(seedQuestions[index].topicId)) seedQuestions.splice(index, 1)
 }
 seedQuestions.push(...curatedA1Questions)
+seedQuestions.push(...curatedA2Questions)
 seedQuestions.push(...completeQuestionSets(seedTopics.filter((topic) => topic.level !== 'A1'), seedQuestions))
 seedDecks.push(...extraDecks, totem1LexiconDeck, totem2LexiconDeck, totem3LexiconDeck)
 seedCards.push(...extraCards, ...totem1LexiconCards, ...totem2LexiconCards, ...totem3LexiconCards)

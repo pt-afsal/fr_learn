@@ -262,7 +262,7 @@ function Onboarding({ initial, onComplete }: { initial: UserSettings; onComplete
 const placementQuestions = [
   { prompt: 'Choose the correct sentence.', choices: ['Je suis etudiante.', 'Je est etudiante.', 'Je etre etudiante.'], answer: 'Je suis etudiante.', level: 'A1' },
   { prompt: 'Complete: Nous ___ francais.', choices: ['parlons', 'parlez', 'parlent'], answer: 'parlons', level: 'A1' },
-  { prompt: 'Choose the correct article: ___ table.', choices: ['Le', 'La', 'Les'], answer: 'La', level: 'A1' },
+  { prompt: 'In the dining room, ___ est pres de la fenetre.', choices: ['Le table', 'La table', 'Les table'], answer: 'La table', level: 'A1' },
   { prompt: 'Hier, elle ___ au cinema.', choices: ['est allee', 'va', 'allait toujours'], answer: 'est allee', level: 'A2' },
   { prompt: 'Choose the best comparison.', choices: ['Lyon est plus calme que Paris.', 'Lyon est calme plus Paris.', 'Lyon plus calme Paris.'], answer: 'Lyon est plus calme que Paris.', level: 'A2' },
   { prompt: 'Complete: Quand j etais petite, je ___ souvent chez ma grand-mere.', choices: ['vais', 'allais', 'irai'], answer: 'allais', level: 'A2' },
@@ -551,9 +551,9 @@ function GrammarPracticeWorkspace({ snapshot, contentId, onDone, onRefresh }: { 
     setSubmitted(false)
   }
   if (submitted) {
-    return <div className="exercise"><span className="eyebrow">Completed · {topic.titleEn}</span><h3>Your score: {score}/{questions.length} · {percent}%</h3><p>{percent >= 80 ? 'Strong result. Start another set to confirm that the rule is stable.' : 'Review the explanation, then try another set with different questions.'}</p><div className="choice-grid">{questions.map((question, index) => { const prompt = snapshot.settings.languageMode === 'fr' ? question.promptFr : question.promptEn; const response = answers[question.id] ?? ''; const correct = normalizeAnswer(response) === normalizeAnswer(question.correctAnswer); return <fieldset key={question.id} className="grammar-question"><legend>{index + 1}. {prompt}</legend><Feedback correct={correct} answer={question.correctAnswer} explanation={snapshot.settings.languageMode === 'fr' ? question.explanationFr : question.explanationEn} /></fieldset> })}</div><div className="button-row"><button className="secondary-button" onClick={restart}>Start another 10-question set</button><button className="primary-button" onClick={() => void onDone(percent)}>Finish activity</button></div></div>
+    return <div className="exercise"><span className="eyebrow">Completed · {topic.titleEn}</span><h3>Your score: {score}/{questions.length} · {percent}%</h3><p>{percent >= 80 ? 'Strong result. Start another set to confirm that the rule is stable.' : 'Review the explanation, then try another set with different questions.'}</p><div className="choice-grid">{questions.map((question, index) => { const prompt = cleanGrammarPrompt(snapshot.settings.languageMode === 'fr' ? question.promptFr : question.promptEn); const response = answers[question.id] ?? ''; const correct = normalizeAnswer(response) === normalizeAnswer(question.correctAnswer); return <fieldset key={question.id} className="grammar-question"><legend>{index + 1}. {prompt}</legend><Feedback correct={correct} answer={question.correctAnswer} explanation={snapshot.settings.languageMode === 'fr' ? question.explanationFr : question.explanationEn} /></fieldset> })}</div><div className="button-row"><button className="secondary-button" onClick={restart}>Start another 10-question set</button><button className="primary-button" onClick={() => void onDone(percent)}>Finish activity</button></div></div>
   }
-  return <div className="exercise"><span className="eyebrow">10-question set · {topic.titleEn}</span>{questions.map((question, index) => { const prompt = snapshot.settings.languageMode === 'fr' ? question.promptFr : question.promptEn; const answer = answers[question.id] ?? ''; const parts = inlinePromptParts(prompt); return <fieldset key={question.id} className="grammar-question"><legend>{index + 1}. {question.type === 'fill' && parts ? <span className="inline-answer-line">{parts.before}<input className="inline-answer-input" value={answer} onChange={(event) => setAnswers({ ...answers, [question.id]: event.target.value })} />{parts.after}</span> : prompt}</legend>{question.type === 'multiple-choice' && question.choices ? <div className="choice-grid">{question.choices.map((choice) => <button className={answer === choice ? 'selected' : ''} key={choice} onClick={() => setAnswers({ ...answers, [question.id]: choice })}>{choice}</button>)}</div> : question.type === 'fill' && !parts ? <input className="large-input" value={answer} onChange={(event) => setAnswers({ ...answers, [question.id]: event.target.value })} placeholder="Type your answer" /> : null}</fieldset> })}<button className="primary-button" disabled={questions.some((question) => !(answers[question.id] ?? '').trim())} onClick={() => void checkAll()}>Check</button></div>
+  return <div className="exercise"><span className="eyebrow">10-question set · {topic.titleEn}</span>{questions.map((question, index) => { const prompt = cleanGrammarPrompt(snapshot.settings.languageMode === 'fr' ? question.promptFr : question.promptEn); const answer = answers[question.id] ?? ''; const parts = inlinePromptParts(prompt); return <fieldset key={question.id} className="grammar-question"><legend>{index + 1}. {question.type === 'fill' && parts ? <span className="inline-answer-line">{parts.before}<input className="inline-answer-input" value={answer} onChange={(event) => setAnswers({ ...answers, [question.id]: event.target.value })} />{parts.after}</span> : prompt}</legend>{question.type === 'multiple-choice' && question.choices ? <div className="choice-grid">{question.choices.map((choice) => <button className={answer === choice ? 'selected' : ''} key={choice} onClick={() => setAnswers({ ...answers, [question.id]: choice })}>{choice}</button>)}</div> : question.type === 'fill' && !parts ? <input className="large-input" value={answer} onChange={(event) => setAnswers({ ...answers, [question.id]: event.target.value })} placeholder="Type your answer" /> : null}</fieldset> })}<button className="primary-button" disabled={questions.some((question) => !(answers[question.id] ?? '').trim())} onClick={() => void checkAll()}>Check</button></div>
 }
 
 function VocabSetBuilder({ currentLevel, onCreated }: { currentLevel: LearningLevel; onCreated: (deckId: string) => Promise<void> }) {
@@ -1164,8 +1164,8 @@ function ProgressLine({ topic }: { topic: SkillTopic }) { return <div className=
 function SpeakButton({ text, enabled, label = 'Play audio' }: { text: string; enabled: boolean; label?: string }) { const speak = () => { if (!enabled || !('speechSynthesis' in window)) return; window.speechSynthesis.cancel(); const utterance = new SpeechSynthesisUtterance(text); utterance.lang = 'fr-FR'; window.speechSynthesis.speak(utterance) }; return <button type="button" className="speak-button" disabled={!enabled} onClick={speak}>{label}</button> }
 
 function selectGrammarQuestionSet(questions: LearningSnapshot['questions'], count: number, salt = Date.now()) {
-  const preferred = questions.filter((question) => question.id.startsWith('gq-v2-'))
-  const source = preferred.length >= count ? preferred : questions
+  const premium = questions.filter((question) => !question.id.startsWith('gq-v2-'))
+  const source = premium
   const shuffled = [...source]
   let seed = Math.abs(Math.floor(salt)) || 1
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
@@ -1183,6 +1183,23 @@ function inlinePromptParts(prompt: string) {
     before: prompt.slice(0, match.index),
     after: prompt.slice(match.index + match[0].length),
   }
+}
+
+function cleanGrammarPrompt(prompt: string) {
+  return prompt
+    .replace(/^(At the station|In class|During a trip|At home|At work|At the restaurant|While shopping|In the city|During an appointment|In a workbook)\s*-\s*/i, '')
+    .replace(/^(A la gare|En classe|Pendant un voyage|A la maison|Au travail|Au restaurant|En faisant des courses|En ville|Pendant un rendez-vous|Dans un cahier dexercices)\s*-\s*/i, '')
+    .replace(/^Choose the correct article:\s*/i, '')
+    .replace(/^Choose the correct phrase\.\s*/i, '')
+    .replace(/^Choose the correct sentence\.\s*/i, '')
+    .replace(/^Choose:\s*/i, '')
+    .replace(/^Complete:\s*/i, '')
+    .replace(/^Choisissez le bon article\s*:\s*/i, '')
+    .replace(/^Choisissez le bon groupe nominal\.\s*/i, '')
+    .replace(/^Choisissez la phrase correcte\.\s*/i, '')
+    .replace(/^Choisissez\s*:\s*/i, '')
+    .replace(/^Completez\s*:\s*/i, '')
+    .trim()
 }
 
 function buildPronunciationPrompts(snapshot: LearningSnapshot, preferred?: string) {

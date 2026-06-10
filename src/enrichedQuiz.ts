@@ -10,14 +10,19 @@
 import type { Question } from './types'
 
 type Group =
+  | 'subjectPronouns'
+  | 'tuVous'
   | 'articlesGender'
   | 'definiteArticles'
   | 'indefiniteArticles'
   | 'contractedArticles'
   | 'pluralNouns'
   | 'adjectiveAgreement'
+  | 'adjectivePosition'
   | 'possessives'
   | 'presentEr'
+  | 'allerFaire'
+  | 'regularIrRe'
   | 'etreAvoir'
   | 'questionForms'
   | 'interrogativeAdverbs'
@@ -51,7 +56,10 @@ type Group =
   | 'timeChronology'
   | 'timeExpressions'
   | 'prepositions'
+  | 'numbersTime'
+  | 'placePrepositions'
   | 'negation'
+  | 'simpleNegation'
   | 'adverbs'
   | 'gerund'
   | 'reportedSpeech'
@@ -64,6 +72,8 @@ type Group =
   | 'register'
   | 'truncation'
   | 'presentatives'
+  | 'demonstrativeAdjectives'
+  | 'ilYA'
   | 'cEstIlEst'
   | 'cleft'
   | 'mixed'
@@ -75,11 +85,16 @@ type Person = { subject: string; index: number }
 type QData = Omit<Question, 'id' | 'topicId'>
 
 const topics: TopicSpec[] = [
+  ['subject-pronouns-a1', 'Subject pronouns', 'Pronoms sujets', 'subjectPronouns'],
+  ['tu-vous-a1', 'Tu vs vous', 'Tu ou vous', 'tuVous'],
   ['articles-gender', 'Articles and gender', 'Articles et genre', 'articlesGender'],
   ['definite-articles-a1', 'Definite articles', 'Articles définis', 'definiteArticles'],
   ['indefinite-articles-a1', 'Indefinite articles', 'Articles indéfinis', 'indefiniteArticles'],
   ['contracted-articles-a1', 'Contracted articles', 'Articles contractés', 'contractedArticles'],
   ['plural-nouns-a1', 'Plural nouns', 'Noms pluriels', 'pluralNouns'],
+  ['adjective-position-a1', 'Adjective position', 'Place des adjectifs', 'adjectivePosition'],
+  ['present-aller-faire-a1', 'Aller and faire', 'Aller et faire', 'allerFaire'],
+  ['regular-ir-re-a1', 'Regular -ir and -re verbs', 'Verbes rÃ©guliers en -ir et -re', 'regularIrRe'],
   ['adjective-agreement-a1', 'Adjective agreement', 'Accord de l’adjectif', 'adjectiveAgreement'],
   ['present-er', 'Present tense: -er verbs', 'Présent des verbes en -er', 'presentEr'],
   ['etre-avoir', 'Être and avoir', 'Être et avoir', 'etreAvoir'],
@@ -100,8 +115,13 @@ const topics: TopicSpec[] = [
   ['time-chronology-a1', 'Time and chronology', 'Temps et chronologie', 'timeChronology'],
   ['c-est-il-est-a1', 'C’est and il est', 'C’est et il est', 'cEstIlEst'],
   ['possessive-adjectives-a1', 'Possessive adjectives', 'Adjectifs possessifs', 'possessives'],
+  ['demonstrative-adjectives-a1', 'Ce, cet, cette, ces', 'Ce, cet, cette, ces', 'demonstrativeAdjectives'],
+  ['numbers-time-a1', 'Numbers, dates, and time', 'Nombres, dates et heure', 'numbersTime'],
+  ['prepositions-place-a1', 'Prepositions of place', 'PrÃ©positions de lieu', 'placePrepositions'],
+  ['negation-ne-pas-a1', 'Ne...pas', 'Ne...pas', 'simpleNegation'],
   ['imperative-a1', 'Imperative', 'Impératif', 'imperative'],
   ['futur-proche-a1', 'Near future', 'Futur proche', 'futureProche'],
+  ['il-y-a-a1', 'Il y a', 'Il y a', 'ilYA'],
   ['passe-compose-a1', 'Passé composé A1', 'Passé composé A1', 'passeCompose'],
   ['truncation-a2', 'Truncation in informal French', 'Troncation', 'truncation'],
   ['negation-varied-a2', 'Varied negation', 'Négation variée', 'negation'],
@@ -208,6 +228,22 @@ const people: Person[] = [
   { subject: 'nous', index: 3 }, { subject: 'vous', index: 4 }, { subject: 'elles', index: 5 },
 ]
 
+const pronounRows = [
+  ['___ habitons dans le meme quartier.', 'Nous', ['Je', 'Tu', 'Ils']],
+  ['___ es tres organisee aujourd hui.', 'Tu', ['Vous', 'Elles', 'Nous']],
+  ['___ arrivent a midi.', 'Ils', ['Il', 'Nous', 'Elle']],
+  ['___ travaille a la reception.', 'Elle', ['Ils', 'Vous', 'Nous']],
+  ['___ suis pret a partir.', 'Je', ['Tu', 'Nous', 'Ils']],
+  ['___ prenez le train de huit heures.', 'Vous', ['Tu', 'Nous', 'Elle']],
+] as const
+
+const tuVousRows = [
+  ['You are speaking to your manager in a meeting.', 'Vous avez un moment ?', ['Tu as un moment ?', 'Vous as un moment ?', 'Tu avez un moment ?']],
+  ['You are greeting your close friend Samir.', 'Tu viens ce soir, Samir ?', ['Vous venez ce soir, Samir ?', 'Tu venez ce soir, Samir ?', 'Vous viens ce soir, Samir ?']],
+  ['You are talking to two classmates.', 'Vous etes prets pour le test ?', ['Tu es prets pour le test ?', 'Vous es prets pour le test ?', 'Tu etes pret pour le test ?']],
+  ['You are asking one unknown customer politely.', 'Vous cherchez quelque chose ?', ['Tu cherches quelque chose ?', 'Vous cherches quelque chose ?', 'Tu cherchez quelque chose ?']],
+] as const
+
 const erVerbs = [
   ['parler', 'parl', 'français'], ['travailler', 'travaill', 'au laboratoire'], ['regarder', 'regard', 'un documentaire'],
   ['préparer', 'prépar', 'le dîner'], ['visiter', 'visit', 'le musée'], ['écouter', 'écout', 'la radio'],
@@ -215,6 +251,62 @@ const erVerbs = [
   ['aimer', 'aim', 'les voyages'], ['arriver', 'arriv', 'à huit heures'], ['demander', 'demand', 'un renseignement'],
 ] as const
 const erEndings = ['e', 'es', 'e', 'ons', 'ez', 'ent']
+
+const adjectivePositionRows = [
+  ['une voiture rouge', ['une rouge voiture', 'une voiture rouges', 'rouge une voiture'], 'Most color adjectives come after the noun.', 'La plupart des adjectifs de couleur se placent apres le nom.'],
+  ['un petit appartement', ['un appartement petit', 'un petits appartement', 'petit un appartement'], 'Short common adjectives such as petit usually come before the noun.', 'Les adjectifs courts frequents comme petit se placent souvent avant le nom.'],
+  ['une belle journee', ['une journee belle', 'une belles journee', 'belle une journee'], 'Beau / belle belongs to the common group often placed before the noun.', 'Beau / belle fait partie du groupe frequent souvent place avant le nom.'],
+  ['un film interessant', ['un interessant film', 'un films interessant', 'interessant un film'], 'Most longer descriptive adjectives come after the noun.', 'La plupart des adjectifs descriptifs plus longs suivent le nom.'],
+] as const
+
+const allerFaireRows = [
+  ['Nous ___ du velo le dimanche. (faire)', 'faisons', ['faites', 'font', 'faissons']],
+  ['Je ___ au bureau en metro. (aller)', 'vais', ['vas', 'va', 'aller']],
+  ['Vous ___ souvent les courses le samedi. (faire)', 'faites', ['faisons', 'font', 'faire']],
+  ['Ils ___ chez le dentiste apres le travail. (aller)', 'vont', ['allez', 'va', 'allent']],
+] as const
+
+const regularIrReRows = [
+  ['Tu ___ le bus a quelle heure ? (attendre)', 'attends', ['attend', 'attendez', 'attentes']],
+  ['Nous ___ toujours le dessert ensemble. (finir)', 'finissons', ['finons', 'finissez', 'finitions']],
+  ['Elle ___ ses devoirs avant le diner. (choisir)', 'choisit', ['choisitons', 'choisis', 'choisissons']],
+  ['Vous ___ la porte en silence. (vendre)', 'vendez', ['vendons', 'vendes', 'vendent']],
+] as const
+
+const demonstrativeRows = [
+  ['___ homme travaille avec ma soeur.', 'cet', ['ce', 'cette', 'ces']],
+  ['___ valise est beaucoup trop lourde.', 'cette', ['ce', 'cet', 'ces']],
+  ['___ dossiers sont deja signes.', 'ces', ['ce', 'cet', 'cette']],
+  ['___ livre appartient au professeur.', 'ce', ['cet', 'cette', 'ces']],
+] as const
+
+const numbersTimeRows = [
+  ['Choose the correct sentence for 7:15.', 'Il est sept heures et quart.', ['Il a sept heures et quart.', 'Nous sommes sept heures et quart.', 'Il est sept ans et quart.']],
+  ['Choose the correct date expression.', 'le premier mai', ['la premier mai', 'les premier mai', 'un premier mai']],
+  ['Choose the correct sentence for 12:30.', 'Il est midi et demi.', ['Il est douze heures demie.', 'Il a midi et demi.', 'Nous sommes midi et demi.']],
+  ['Choose the natural way to say the day.', 'Nous sommes lundi.', ['Il est lundi heures.', 'C est lundi heure.', 'Nous avons lundi.']],
+] as const
+
+const placePrepositionRows = [
+  ['Le chat dort ___ la chaise.', 'sous', ['sur', 'devant', 'avec']],
+  ['La pharmacie est ___ de la banque.', 'a cote', ['sur', 'avec', 'pendant']],
+  ['Les enfants jouent ___ le jardin.', 'dans', ['sur', 'a cote', 'sous']],
+  ['La boulangerie est ___ la poste.', 'en face de', ['dans', 'avec', 'sans']],
+] as const
+
+const simpleNegationRows = [
+  ['Je ___ comprends ___ cette consigne.', 'ne / pas', ['pas / ne', 'n / pas de', 'ne / rien']],
+  ['Elle ___ aime ___ le cafe.', "n' / pas", ['ne / pas', "n' / plus", 'pas / ne']],
+  ['Nous ___ parlons ___ pendant le film.', 'ne / pas', ['n / pas', 'ne / jamais', 'pas / ne']],
+  ['Tu ___ oublies ___ ton badge.', "n' / jamais", ['ne / pas', "n' / pas", 'pas / n']],
+] as const
+
+const ilYARows = [
+  ['Choose the sentence that means “There are three mistakes in this text.”', 'Il y a trois erreurs dans ce texte.', ['Il est trois erreurs dans ce texte.', 'Il a trois erreurs dans ce texte.', 'Y a il trois erreurs dans ce texte.']],
+  ['Choose the correct negative form.', "Il n y a pas de train apres minuit.", ['Il ne y a pas train apres minuit.', 'Il y n a pas de train apres minuit.', 'Il n a y pas de train apres minuit.']],
+  ['Complete: ___ un supermarche pres de chez nous.', 'Il y a', ['C est', 'Il est', 'Voila']],
+  ['Choose the correct question.', 'Est-ce qu il y a une pharmacie ici ?', ['Il y a est-ce qu une pharmacie ici ?', 'Y a-t-il est-ce qu une pharmacie ici ?', 'Est-ce qu il a une pharmacie ici ?']],
+] as const
 
 const contexts = [
   'At work', 'During a French class', 'While planning a trip', 'In a formal email', 'At a restaurant',
@@ -240,6 +332,16 @@ function addPrefix(data: QData, spec: TopicSpec, variant: number): QData {
   const prefix = `${pick(contexts, variant)} — `
   const prefixFr = `${pick(['Au travail', 'Pendant un cours de français', 'En préparant un voyage', 'Dans un e-mail formel', 'Au restaurant', 'Pendant un appel', 'Chez le médecin', 'Avec un collègue', 'À la maison', 'À la gare'], variant)} — `
   return { ...data, promptEn: `${prefix}${data.promptEn}`, promptFr: `${prefixFr}${data.promptFr}`, explanationEn: `${data.explanationEn} Focus: ${spec.titleEn}.`, explanationFr: `${data.explanationFr} Point ciblé : ${spec.titleFr}.` }
+}
+
+function subjectPronouns(variant: number): QData {
+  const [sentence, answer, wrong] = pick(pronounRows, variant)
+  return mc(`Choose the correct subject pronoun: ${sentence}`, `Choisissez le bon pronom sujet : ${sentence}`, [answer, ...wrong], answer, 'Match the pronoun to the verb form and the meaning of the sentence.', 'Associez le pronom a la forme verbale et au sens de la phrase.', variant)
+}
+
+function tuVous(variant: number): QData {
+  const [context, answer, wrong] = pick(tuVousRows, variant)
+  return mc(`Choose the most appropriate sentence. ${context}`, `Choisissez la phrase la plus adaptee. ${context}`, [answer, ...wrong], answer, 'Use tu for one person in an informal situation, and vous for formal singular or any plural addressee.', 'On utilise tu avec une personne dans une situation informelle, et vous au singulier formel ou pour le pluriel.', variant)
 }
 
 function articlesGender(variant: number): QData {
@@ -308,6 +410,11 @@ function adjectiveAgreement(variant: number): QData {
   return mc(`Complete: ${subject} ${verb} ___ .`, `Complétez : ${subject} ${verb} ___ .`, [answer, adjective.m, adjective.f, adjective.mp, adjective.fp, extraTrap], answer, `The adjective must agree with ${subject.toLowerCase()}: ${answer}.`, `L’adjectif s’accorde avec ${subject.toLowerCase()} : ${answer}.`, variant)
 }
 
+function adjectivePosition(variant: number): QData {
+  const [answer, wrong, explanationEn, explanationFr] = pick(adjectivePositionRows, variant)
+  return sentenceChoice(answer, [...wrong], explanationEn, explanationFr, variant, 'Choose the natural noun phrase.', 'Choisissez le groupe nominal naturel.')
+}
+
 function possessives(variant: number): QData {
   const rows = [
     ['Marie', 'voiture', 'f', 'sa'], ['Paul', 'livre', 'm', 'son'], ['nous', 'amis', 'p', 'nos'], ['vous', 'bureau', 'm', 'votre'],
@@ -320,6 +427,16 @@ function possessives(variant: number): QData {
 function presentEr(variant: number): QData {
   const [infinitive, stem, complement] = pick(erVerbs, variant * 5); const person = pick(people, variant * 3); const answer = `${stem}${erEndings[person.index]}`
   return mc(`Complete in the present tense: ${cap(person.subject)} ___ ${complement}. (${infinitive})`, `Complétez au présent : ${cap(person.subject)} ___ ${complement}. (${infinitive})`, [`${stem}e`, `${stem}es`, `${stem}ons`, `${stem}ez`, `${stem}ent`], answer, `With ${person.subject}, ${infinitive} takes the ending -${erEndings[person.index]}.`, `Avec ${person.subject}, ${infinitive} prend la terminaison -${erEndings[person.index]}.`, variant)
+}
+
+function allerFaire(variant: number): QData {
+  const [sentence, answer, wrong] = pick(allerFaireRows, variant)
+  return mc(`Complete in the present tense: ${sentence}`, `ComplÃ©tez au prÃ©sent : ${sentence}`, [answer, ...wrong], answer, 'Aller and faire are irregular high-frequency verbs.', 'Aller et faire sont des verbes irrÃ©guliers trÃ¨s frÃ©quents.', variant)
+}
+
+function regularIrRe(variant: number): QData {
+  const [sentence, answer, wrong] = pick(regularIrReRows, variant)
+  return mc(`Complete in the present tense: ${sentence}`, `ComplÃ©tez au prÃ©sent : ${sentence}`, [answer, ...wrong], answer, 'Regular -ir and -re verbs use stable patterns, but not the same endings as -er verbs.', 'Les verbes rÃ©guliers en -ir et en -re suivent des modÃ¨les stables, mais pas les mÃªmes terminaisons que les verbes en -er.', variant)
 }
 
 function etreAvoir(variant: number): QData {
@@ -375,6 +492,26 @@ function presentContinuous(variant: number): QData {
   return mc(`Complete: Je suis ___ ${infinitive} ${complement}.`, `Complétez : Je suis ___ ${infinitive} ${complement}.`, ['en train de', 'en train à', 'dans train de', 'en cours à'], 'en train de', 'Être en train de + infinitive expresses an action in progress.', 'Être en train de + infinitif exprime une action en cours.', variant)
 }
 
+function demonstrativeAdjectives(variant: number): QData {
+  const [sentence, answer, wrong] = pick(demonstrativeRows, variant)
+  return mc(`Complete: ${sentence}`, `ComplÃ©tez : ${sentence}`, [answer, ...wrong], answer, 'Use ce before a masculine singular noun, cet before a masculine singular vowel sound, cette before a feminine singular noun, and ces in the plural.', 'Utilisez ce devant un nom masculin singulier, cet devant un nom masculin avec voyelle, cette devant un nom fÃ©minin singulier et ces au pluriel.', variant)
+}
+
+function numbersTime(variant: number): QData {
+  const [promptEn, answer, wrong] = pick(numbersTimeRows, variant)
+  return mc(promptEn, promptEn, [answer, ...wrong], answer, 'Time and date expressions follow fixed patterns such as il est, le premier, and nous sommes lundi.', 'Les expressions de l heure et de la date suivent des structures fixes comme il est, le premier et nous sommes lundi.', variant)
+}
+
+function placePrepositions(variant: number): QData {
+  const [sentence, answer, wrong] = pick(placePrepositionRows, variant)
+  return mc(`Complete with the correct preposition: ${sentence}`, `ComplÃ©tez avec la bonne prÃ©position : ${sentence}`, [answer, ...wrong], answer, 'The chosen preposition must match the spatial relation.', 'La prÃ©position choisie doit correspondre Ã  la relation spatiale.', variant)
+}
+
+function simpleNegation(variant: number): QData {
+  const [sentence, answer, wrong] = pick(simpleNegationRows, variant)
+  return mc(`Complete the negative form: ${sentence}`, `ComplÃ©tez la forme nÃ©gative : ${sentence}`, [answer, ...wrong], answer, 'Basic negation places ne or n apostrophe before the conjugated verb and pas or another negative word after it.', 'La nÃ©gation de base place ne ou n apostrophe avant le verbe conjuguÃ© et pas ou un autre mot nÃ©gatif aprÃ¨s.', variant)
+}
+
 function imperative(variant: number): QData {
   const rows = [
     ['écouter', 'tu', 'Écoute le professeur !', ['Écoutes le professeur !', 'Écoutez le professeur !', 'Écoutons le professeur !']],
@@ -393,6 +530,30 @@ function futureProche(variant: number): QData {
 }
 
 function passeCompose(variant: number): QData {
+  const expandedRows = [
+    ['Hier soir, j ai ___ un documentaire jusqu a minuit.', 'regarde', ['suis regarde', 'regardais', 'regarder']],
+    ['Elle est ___ au marche avant d aller au bureau.', 'allee', ['alle', 'aller', 'allaient']],
+    ['Nous avons ___ le rapport avant midi.', 'fini', ['finis', 'finissions', 'finir']],
+    ['Ils sont ___ tres tard a cause du dernier train.', 'arrives', ['arrive', 'arriver', 'arrivaient']],
+    ['Tu as ___ ce message ce matin ?', 'recu', ['recois', 'recevoir', 'recevais']],
+    ['Marie s est ___ a huit heures pour prendre son avion.', 'reveillee', ['reveille', 'reveiller', 'reveillait']],
+    ['Mes collegues ont ___ le projet en dix jours.', 'fait', ['fais', 'faire', 'faisaient']],
+    ['J ai ___ mes cles dans le taxi.', 'perdu', ['perdre', 'perdais', 'perdus']],
+    ['Elle est ___ chez elle sans attendre la fin de la reunion.', 'rentree', ['rentre', 'rentrer', 'rentrait']],
+    ['Nous n avons pas ___ la porte en partant.', 'ferme', ['fermer', 'fermions', 'fermes']],
+    ['Ils ont ___ un appartement dans le centre l annee derniere.', 'choisi', ['choisir', 'choisissaient', 'choisis']],
+    ['Julie et Emma sont ___ tres tot pour la randonnee.', 'parties', ['parti', 'partir', 'partaient']],
+    ['Vous avez ___ pourquoi le magasin etait ferme ?', 'compris', ['comprendre', 'compreniez', 'comprisent']],
+    ['J ai ___ de telephoner avant de venir.', 'oublie', ['oublier', 'oubliais', 'oublies']],
+    ['Mes soeurs sont ___ devant la gare pendant une heure.', 'restees', ['restes', 'rester', 'restaient']],
+    ['Le professeur a ___ les copies cet apres-midi.', 'rendu', ['rendre', 'rendait', 'rendus']],
+    ['Nous sommes ___ dans un petit hotel pres du port.', 'descendus', ['descendu', 'descendre', 'descendions']],
+    ['Elles sont ___ se promener apres le dejeuner.', 'allees', ['alles', 'aller', 'allaient']],
+    ['J ai ___ la bonne reponse au dernier moment.', 'trouve', ['trouver', 'trouvais', 'trouves']],
+    ['Tu es ___ te coucher tres tard hier soir.', 'alle', ['allee', 'aller', 'allais']],
+  ] as const
+  const [sentence2, answer2, wrong2] = pick(expandedRows, variant)
+  return mc(`Complete in the passe compose: ${sentence2}`, `Completez au passe compose : ${sentence2}`, [answer2, ...wrong2], answer2, 'Choose the auxiliary and past participle form that matches the subject and the verb.', 'Choisissez l auxiliaire et le participe passe qui correspondent au sujet et au verbe.', variant)
   const rows = [
     ['Hier, j’___ un documentaire.', 'ai regardé', ['suis regardé', 'regardais', 'ai regarder']], ['Elle ___ au marché ce matin.', 'est allée', ['a allé', 'est allé', 'allait']],
     ['Nous ___ le rapport avant midi.', 'avons fini', ['sommes fini', 'avons finis', 'finissions']], ['Ils ___ très tard.', 'sont arrivés', ['ont arrivé', 'sont arrivé', 'arrivaient']],
@@ -421,6 +582,30 @@ function passeComposeEtre(variant: number): QData {
 }
 
 function imparfait(variant: number): QData {
+  const expandedRows = [
+    ['Quand j etais petite, j ___ souvent chez ma tante.', 'allais', ['suis allee', 'irai', 'vais']],
+    ['Pendant que nous ___, le telephone a sonne.', 'dormions', ['avons dormi', 'dormirons', 'dormons']],
+    ['Il ___ froid tous les matins en janvier.', 'faisait', ['a fait', 'fera', 'fait']],
+    ['Vous ___ toujours le train de huit heures.', 'preniez', ['avez pris', 'prendrez', 'prenez']],
+    ['Le bureau ___ tres calme avant l arrivee des clients.', 'etait', ['a ete', 'sera', 'est']],
+    ['Quand nous habitions a Lyon, nous ___ pres du parc.', 'mangions', ['avons mange', 'mangerons', 'mangeons']],
+    ['Ma grand-mere ___ du the chaque soir.', 'buvait', ['a bu', 'boira', 'boit']],
+    ['Les enfants ___ parce qu ils avaient peur de l orage.', 'pleuraient', ['ont pleure', 'pleureront', 'pleurent']],
+    ['Je ___ deja un peu le francais avant ce voyage.', 'connaissais', ['ai connu', 'connaitrai', 'connais']],
+    ['Nous ___ rarement tard a cette epoque-la.', 'sortions', ['sommes sortis', 'sortirons', 'sortons']],
+    ['Tu ___ toujours la verite quand tu etais petit.', 'disais', ['as dit', 'diras', 'dis']],
+    ['Il ___ mal a la tete depuis le matin.', 'avait', ['a eu', 'a', 'aura']],
+    ['Le soleil ___ et les touristes prenaient des photos.', 'brillait', ['a brille', 'brillera', 'brille']],
+    ['Chaque dimanche, mes parents ___ le marche ensemble.', 'faisaient', ['ont fait', 'feront', 'font']],
+    ['Je ne ___ pas pourquoi tout le monde riait.', 'comprenais', ['ai compris', 'comprendrai', 'comprends']],
+    ['Avant, on ___ dans une maison plus petite.', 'vivait', ['a vecu', 'vivra', 'vit']],
+    ['Vous ___ souvent fatigues apres le service du soir.', 'etiez', ['avez ete', 'serez', 'etes']],
+    ['Pendant le film, elle ___ sans parler.', 'souriait', ['a souri', 'sourira', 'sourit']],
+    ['Les rues ___ presque vides a minuit.', 'etaient', ['ont ete', 'seront', 'sont']],
+    ['Je ___ mon temps entre les cours et mon travail.', 'partageais', ['ai partage', 'partagerai', 'partage']],
+  ] as const
+  const [sentence2, answer2, wrong2] = pick(expandedRows, variant)
+  return mc(`Choose the correct imparfait form: ${sentence2}`, `Choisissez la bonne forme a l imparfait : ${sentence2}`, [answer2, ...wrong2], answer2, 'Use imparfait for description, habitual past actions, repeated situations, and background.', 'Utilisez l imparfait pour la description, l habitude passee, la repetition et le decor du recit.', variant)
   const rows = [
     ['Quand j’étais petite, je ___ souvent chez ma tante.', 'allais', ['suis allée', 'irai', 'vais']], ['Pendant que nous ___, le téléphone a sonné.', 'dormions', ['avons dormi', 'dormirons', 'dormons']],
     ['Il ___ froid tous les matins.', 'faisait', ['a fait', 'fera', 'fait']], ['Vous ___ toujours le train de huit heures.', 'preniez', ['avez pris', 'prendrez', 'prenez']],
@@ -732,6 +917,11 @@ function presentatives(variant: number): QData {
   return mc(`Complete with the correct presentative: ${sentence}`, `Complétez avec le bon présentatif : ${sentence}`, [answer, ...wrong], answer, 'Use c’est, il y a, voici, or voilà according to whether you identify, state existence, or present something.', 'Utilisez c’est, il y a, voici ou voilà selon qu’on identifie, signale l’existence ou présente quelque chose.', variant)
 }
 
+function ilYA(variant: number): QData {
+  const [promptEn, answer, wrong] = pick(ilYARows, variant)
+  return mc(promptEn, promptEn, [answer, ...wrong], answer, 'Use il y a to express existence, and keep the fixed order in negatives and questions.', 'On utilise il y a pour exprimer l existence, et on garde l ordre fixe dans la nÃ©gation et dans la question.', variant)
+}
+
 function cEstIlEst(variant: number): QData {
   const rows = [
     ['___ médecin.', 'Il est', ['C’est', 'Il y a', 'Voici']], ['___ un médecin très compétent.', 'C’est', ['Il est', 'Il y a', 'Voilà de']],
@@ -752,14 +942,16 @@ function cleft(variant: number): QData {
 }
 
 const groupGenerators: Record<Group, (variant: number) => QData> = {
-  articlesGender, definiteArticles, indefiniteArticles, contractedArticles, pluralNouns, adjectiveAgreement, possessives,
-  presentEr, etreAvoir, questionForms, interrogativeAdverbs, answerSi, interrogativePronouns, presentContinuous,
-  imperative, futureProche, passeCompose, passeComposeAvoir, passeComposeEtre, imparfait, pcVsImparfait, recentPast,
+  subjectPronouns, tuVous, articlesGender, definiteArticles, indefiniteArticles, contractedArticles, pluralNouns,
+  adjectiveAgreement, adjectivePosition, possessives, presentEr, allerFaire, regularIrRe, etreAvoir, questionForms,
+  interrogativeAdverbs, answerSi, interrogativePronouns, presentContinuous, demonstrativeAdjectives, numbersTime,
+  placePrepositions, simpleNegation, imperative, futureProche, passeCompose, passeComposeAvoir, passeComposeEtre,
+  imparfait, pcVsImparfait, recentPast,
   plusQueParfait, passeSimple, objectPronouns, pronounPlacement, yEn, doublePronouns, relativeSimple, relativeComplex,
   demonstratives, indefinites, conditionalPoliteness, futureSimple, irregularFuture, siPresentFuture, siHypothesis,
   subjunctiveObligation, timeChronology, timeExpressions, prepositions, negation, adverbs, gerund, reportedSpeech,
-  comparative, superlative, connectors, cause, nominalisation, passive, register, truncation, presentatives, cEstIlEst,
-  cleft,
+  comparative, superlative, connectors, cause, nominalisation, passive, register, truncation, presentatives, ilYA,
+  cEstIlEst, cleft,
   mixed: (variant) => pick([
     articlesGender, presentEr, passeCompose, pcVsImparfait, objectPronouns, relativeSimple, connectors, prepositions,
     comparative, negation, timeExpressions, questionForms,

@@ -1166,18 +1166,137 @@ const curatedRows: QuestionRow[] = [
   ],
 ]
 
+const curatedPromptOverridesEn: Partial<Record<string, string[]>> = {
+  'futur-simple-irregular-b1': [
+    'Tomorrow morning, complete the sentence: Nous ___ tres occupes. (etre)',
+    'Before answering, complete the sentence: Tu ___ le temps de reflechir. (avoir)',
+    'Next weekend, complete the sentence: Elles ___ nous voir.',
+    'After the mistake, complete the sentence: Je ___ attention la prochaine fois. (faire)',
+    'Choose the sentence that announces a future possibility.',
+    'At the end of the interview, complete the sentence: Vous ___ la reponse demain. (savoir)',
+    'Talking about tomorrow, which sentence is correct?',
+    'At work, complete the sentence: Il ___ rendre le dossier lundi. (devoir)',
+    'Which future stem is needed for voir?',
+    'At the station, complete the sentence: Quand tu arriveras, je te ___. (voir)',
+  ],
+  'plus-que-parfait-b1': [
+    'Before leaving for the meeting, which sentence means: I had already eaten?',
+    'When we got there, complete the sentence: Elle ___ avant notre arrivee. (partir)',
+    'For the evening plan, complete the sentence: Nous ___ une table avant de sortir. (reserver)',
+    'Read the sentence and identify the earlier action: Quand je suis arrive, Paul avait fini.',
+    'After they got locked out, complete the sentence: Ils ___ leurs cles, donc ils ont appele le voisin. (perdre)',
+    'In a past narrative, choose the correct sentence.',
+    'Talking about the order of events, complete the sentence: Tu ___ le film avant de lire le livre. (voir)',
+    'Choose the best tense for this past sequence: Hier, je n avais pas faim parce que je ___ trop a midi.',
+    'Before the meeting began, complete the sentence: Vous ___ votre decision. (prendre)',
+    'In the form "elles etaient sorties", which auxiliary is used?',
+  ],
+  'si-imparfait-conditional-b1': [
+    'Which sentence correctly expresses a present hypothetical situation?',
+    'For a possible invitation, complete the sentence: Si tu venais, nous ___ ensemble. (diner)',
+    'In this pattern, which form should not come directly after si?',
+    'Talking about an unreal change, complete the sentence: Je changerais de travail si je ___. (pouvoir)',
+    'Which sentence expresses an unreal present hypothesis?',
+    'Talking about an unreal situation, complete the sentence: Si nous avions plus d argent, nous ___ une maison. (acheter)',
+    'Choose the sentence that means: If I were you, I would wait.',
+    'Complete the hypothesis: Elle nous aiderait si elle ___ libre. (etre)',
+    'Which verb form is in the conditional?',
+    'Choose the correct result clause: Si vous saviez la verite, vous ___ surpris. (etre)',
+  ],
+  'subjunctive-basic-b1': [
+    'Before the exam, complete the sentence: Il faut que tu ___ a l heure. (etre)',
+    'Which expression usually triggers the subjunctive?',
+    'For a group plan, complete the sentence: Je veux qu elle ___ avec nous. (venir)',
+    'Which sentence correctly uses the subjunctive after bien que?',
+    'In a work context, complete the sentence: Nous travaillons pour que tout ___ pret. (etre)',
+    'Which expression normally takes the indicative, not the subjunctive?',
+    'During a presentation, complete the sentence: Il est important que nous ___ clairement. (parler)',
+    'Which subjunctive form of avoir fits with vous?',
+    'After the results, complete the sentence: Je suis content que tu ___ reussi. (avoir)',
+    'In "Je veux que tu partes", what is the clearest clue that the subjunctive is needed?',
+  ],
+  'dont-ce-qui-ce-que-b1': [
+    'Choose the correct relative pronoun: Le sujet ___ je parle.',
+    'Talking about preferences, complete the sentence: ___ me plait, c est la musique.',
+    'In a discussion, complete the sentence: ___ je veux dire est simple.',
+    'Choose the correct sentence to express possession in a relative clause.',
+    'Which relative pronoun replaces "de cette chose"?',
+    'During the conversation, complete the sentence: Je ne comprends pas ___ il veut.',
+    'Choose the sentence that means: What worries me is the price.',
+    'At the library, complete the sentence: Voila le livre ___ j ai besoin.',
+    'Which relative pronoun functions as a direct object?',
+    'After the incident, complete the sentence: Dis-moi ___ tu as vu.',
+  ],
+  'advanced-negation-b1': [
+    'Choose the sentence that means: I no longer have anything.',
+    'At the table, complete the sentence: Elle ne boit ___ de l eau. (only)',
+    'Choose the sentence that means: Nobody came.',
+    'After looking outside, complete the sentence: Je n ai vu ___ dans la rue. (nobody)',
+    'Choose the correct sentence with ni...ni.',
+    'In the test report, complete the sentence: ___ etudiant n a reussi l exercice. (no)',
+    'Which sentence means: I only have ten euros?',
+    'Complete the sentence with a negative subject: Rien ne ___ facile. (etre)',
+    'Choose the formal written negative sentence.',
+    'Complete the sentence: Nous ne voulons ___ sortir ___ parler. (neither/nor)',
+  ],
+  'connectors-cause-consequence-b1': [
+    'Which connector introduces a consequence rather than a cause?',
+    'Looking outside, complete the sentence: Je reste a la maison ___ il pleut.',
+    'Which connector introduces a contrast?',
+    'Complete the logical link: Il a rate son train ; ___, il est arrive tard.',
+    'Which connector gives a reason that the listener already knows?',
+    'In a product review, complete the sentence: C est cher ; ___, la qualite est excellente.',
+    'Choose the sentence that introduces an opposing point.',
+    'At work, complete the sentence: Le dossier est incomplet ; ___ il faut le refaire.',
+    'Which connector means "however" or "nevertheless"?',
+    'Give advice with a known cause: ___ tu es malade, appelle le medecin.',
+  ],
+  'reported-speech-past-b1': [
+    'Choose the correct reported-speech sentence in the past.',
+    'After his explanation, complete the sentence: Il a explique qu il ___ son billet. (perdre)',
+    'Which group is the reporting phrase in this sentence?',
+    'In reported speech, complete the sentence: Nous avons repondu que nous ___ demain. (venir, conditional)',
+    'Choose the correct indirect yes/no question in the past.',
+    'Later that day, complete the sentence: Elle a dit qu elle ___ plus tard. (appeler, conditional)',
+    'Which sentence correctly reports a statement?',
+    'After the announcement, complete the sentence: Le professeur a annonce que l examen ___ difficile. (etre, imparfait)',
+    'Choose the best indirect question.',
+    'After the conversation, complete the sentence: Il m a demande ce que je ___. (vouloir, imparfait)',
+  ],
+  'opinion-argument-b1': [
+    'Which opener clearly introduces a personal opinion in a B1 argument?',
+    'In a short argument, complete the sentence: Je pense ___ les transports publics sont importants.',
+    'Which connector introduces the first point in a structured argument?',
+    'To close your argument, complete the sentence: ___ conclusion, je suis pour cette idee.',
+    'Which sentence sounds like a stronger B1-level opinion with support?',
+    'In a debate, complete the sentence: Selon ___, cette solution est plus juste.',
+    'Which phrase introduces an example to support your opinion?',
+    'In a discussion, complete the sentence: Je ne suis pas d accord ___ cette proposition.',
+    'Which phrase makes an opinion sound more nuanced?',
+    'To add another argument, complete the sentence: D autre ___, cette option coute moins cher.',
+  ],
+}
+
+const topicPromptCounts: Record<string, number> = {}
+
 export const a2B1QuestionBank: Question[] = curatedRows.map(
-  ([topicId, type, promptEn, promptFr, choices, correctAnswer, explanationEn, explanationFr], index) => ({
+  ([topicId, type, promptEn, promptFr, choices, correctAnswer, explanationEn, explanationFr], index) => {
+    topicPromptCounts[topicId] = (topicPromptCounts[topicId] ?? 0) + 1
+    const localIndex = topicPromptCounts[topicId] - 1
+    const refinedPromptEn = curatedPromptOverridesEn[topicId]?.[localIndex] ?? promptEn
+
+    return ({
     id: `a2b1-${topicId}-${index + 1}`,
     topicId,
     type,
-    promptEn,
+    promptEn: refinedPromptEn,
     promptFr,
     choices,
     correctAnswer,
     explanationEn,
     explanationFr,
-  }),
+    })
+  },
 )
 
 export function completeQuestionSets(topics: SkillTopic[], questions: Question[], targetSize = 10): Question[] {
